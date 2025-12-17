@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAREK ENTERPRISE - Sales Management</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TAREK ENTERPRISE</h1>
+            <p>Daily Sales Management System</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="showTab('sales-entry')">Add Sales</button>
+            <button class="tab-btn" onclick="showTab('sales-history')">Sales History</button>
+        </nav>
+
+        <!-- Sales Entry Tab -->
+        <div id="sales-entry" class="tab-content active">
+            <div class="card">
+                <h2>Daily Sales Entry</h2>
+                <form id="sales-form">
+                    <div class="form-group">
+                        <label for="sale-date">Date:</label>
+                        <input type="date" id="sale-date" required>
+                    </div>
+
+                    <div class="items-section">
+                        <h3>Items</h3>
+                        <div id="items-container">
+                            <div class="item-row">
+                                <input type="text" placeholder="Item Name" class="item-name" required>
+                                <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" required>
+                                <input type="number" placeholder="Quantity" class="item-quantity" min="1" required>
+                                <span class="item-total">0.00</span>
+                                <button type="button" class="remove-item" onclick="removeItem(this)">×</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-item" onclick="addItem()">+ Add Item</button>
+                    </div>
+
+                    <div class="total-section">
+                        <h3>Daily Total: $<span id="daily-total">0.00</span></h3>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit">Save Sales</button>
+                        <button type="button" onclick="clearForm()">Clear</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sales History Tab -->
+        <div id="sales-history" class="tab-content">
+            <div class="card">
+                <h2>Sales History</h2>
+                
+                <div class="search-section">
+                    <div class="search-controls">
+                        <input type="date" id="search-date" placeholder="Search by date">
+                        <input type="month" id="search-month" placeholder="Search by month">
+                        <button onclick="searchSales()">Search</button>
+                        <button onclick="showAllSales()">Show All</button>
+                        <button onclick="exportToExcel()" class="export-btn">Export to Excel</button>
+                    </div>
+                </div>
+
+                <div class="summary-section">
+                    <div class="summary-card">
+                        <h4>Total Records: <span id="total-records">0</span></h4>
+                        <h4>Total Amount: $<span id="total-amount">0.00</span></h4>
+                    </div>
+                </div>
+
+                <div class="history-container">
+                    <div id="sales-list">
+                        <!-- Sales records will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
