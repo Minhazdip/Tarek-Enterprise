@@ -67,7 +67,7 @@ function showTab(tabName, clickedButton) {
 }
 
 // Category switching functionality
-function showCategory(categoryName) {
+function showCategory(categoryName, clickedButton) {
     // Hide all category sections
     const categorySections = document.querySelectorAll('.category-section');
     categorySections.forEach(section => section.classList.remove('active'));
@@ -80,7 +80,17 @@ function showCategory(categoryName) {
     document.getElementById(categoryName).classList.add('active');
     
     // Add active class to clicked button
-    event.target.classList.add('active');
+    if (clickedButton) {
+        clickedButton.classList.add('active');
+    } else {
+        // Fallback: find the button by category name
+        const targetButton = Array.from(categoryButtons).find(btn => 
+            btn.getAttribute('onclick').includes(categoryName)
+        );
+        if (targetButton) {
+            targetButton.classList.add('active');
+        }
+    }
     
     // Load stock for the selected category
     const category = categoryName === 'raw-materials' ? 'raw' : 'furniture';
