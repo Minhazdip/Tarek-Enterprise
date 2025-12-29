@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add event listeners
     document.getElementById('sales-form').addEventListener('submit', saveSales);
-    document.getElementById('stock-form').addEventListener('submit', addStock);
+    document.getElementById('raw-stock-form').addEventListener('submit', function(e) { addStock(e, 'raw'); });
+    document.getElementById('furniture-stock-form').addEventListener('submit', function(e) { addStock(e, 'furniture'); });
     
     // Add input listeners for automatic calculation
     document.addEventListener('input', function(e) {
@@ -58,10 +59,32 @@ function showTab(tabName, clickedButton) {
     if (tabName === 'sales-history') {
         loadSalesHistory();
     } else if (tabName === 'add-stock') {
-        loadStockList();
+        loadStockList('raw');
+        loadStockList('furniture');
     } else if (tabName === 'sales-entry') {
         populateProductDropdowns();
     }
+}
+
+// Category switching functionality
+function showCategory(categoryName) {
+    // Hide all category sections
+    const categorySections = document.querySelectorAll('.category-section');
+    categorySections.forEach(section => section.classList.remove('active'));
+    
+    // Remove active class from all category buttons
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    categoryButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // Show selected category
+    document.getElementById(categoryName).classList.add('active');
+    
+    // Add active class to clicked button
+    event.target.classList.add('active');
+    
+    // Load stock for the selected category
+    const category = categoryName === 'raw-materials' ? 'raw' : 'furniture';
+    loadStockList(category);
 }
 
 // Add new item row
@@ -74,9 +97,11 @@ function addItem() {
             <option value="">Select Item</option>
         </select>
         <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" required readonly>
-        <input type="number" placeholder="Weight (KG)" class="item-quantity" step="0.1" min="0.1" required>
-        <span class="stock-available">Stock: 0 KG</span>
+        <input type="number" placeholder="Quantity" class="item-quantity" step="0.1" min="0.1" required>
+        <span class="stock-available">Stock: 0</span>
         <span class="item-total">0.00</span>
+        <input type="text" placeholder="Customer Name" class="customer-name" required>
+        <input type="number" placeholder="Due Payment" class="due-payment" step="0.01" min="0">
         <button type="button" class="remove-item" onclick="removeItem(this)">×</button>
     `;
     container.appendChild(newRow);
@@ -124,34 +149,41 @@ function saveSales(event) {
     let stockError = false;
     
     itemRows.forEach(row => {
-        const name = row.querySelector('.item-name').value.trim();
+        const selectedValue = row.querySelector('.item-name').value.trim();
         const price = parseFloat(row.querySelector('.item-price').value);
         const weight = parseFloat(row.querySelector('.item-quantity').value);
+        const customerName = row.querySelector('.customer-name').value.trim();
+        const duePayment = parseFloat(row.querySelector('.due-payment').value) || 0;
         
-        if (name && price > 0 && weight > 0) {
-            // Check stock availability
-            const stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
-            const stockItem = stockData.find(item => item.name === name);
+        if (selectedValue && price > 0 && weight > 0 && customerName) {
+            const [productName, category] = selectedValue.split('|');
+            const storageKey = `tarekStockData_${category}`;
+            const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+            const stockItem = stockData.find(item => item.name === productName);
             
             if (!stockItem) {
-                alert(`Product "${name}" not found in stock!`);
+                alert(`Product "${productName}" not found in stock!`);
                 stockError = true;
                 return;
             }
             
             if (stockItem.quantity < weight) {
-                alert(`Insufficient stock for "${name}". Available: ${stockItem.quantity} KG, Requested: ${weight} KG`);
+                const unit = stockItem.unit || (stockItem.category === 'raw' ? 'KG' : 'Pieces');
+                alert(`Insufficient stock for "${productName}". Available: ${stockItem.quantity} ${unit}, Requested: ${weight} ${unit}`);
                 stockError = true;
                 return;
             }
             
             items.push({
-                name: name,
+                name: productName,
+                category: category,
                 price: price,
                 quantity: weight,
+                customerName: customerName,
+                duePayment: duePayment,
                 total: price * weight
             });
-        } else if (name || price || weight) {
+        } else if (selectedValue || price || weight || customerName) {
             isValid = false;
         }
     });
@@ -218,9 +250,11 @@ function clearForm() {
                 <option value="">Select Item</option>
             </select>
             <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" required readonly>
-            <input type="number" placeholder="Weight (KG)" class="item-quantity" step="0.1" min="0.1" required>
-            <span class="stock-available">Stock: 0 KG</span>
+            <input type="number" placeholder="Quantity" class="item-quantity" step="0.1" min="0.1" required>
+            <span class="stock-available">Stock: 0</span>
             <span class="item-total">0.00</span>
+            <input type="text" placeholder="Customer Name" class="customer-name" required>
+            <input type="number" placeholder="Due Payment" class="due-payment" step="0.01" min="0">
             <button type="button" class="remove-item" onclick="removeItem(this)">×</button>
         </div>
     `;
@@ -263,8 +297,8 @@ function displaySalesRecords(records) {
             <div class="items-list">
                 ${record.items.map(item => `
                     <div class="item-detail">
-                        <span>${item.name}</span>
-                        <span>${item.quantity} KG × $${item.price.toFixed(2)} = $${item.total.toFixed(2)}</span>
+                        <span>${item.name} - Customer: ${item.customerName}</span>
+                        <span>${item.quantity} ${item.unit || (item.category === 'raw' ? 'KG' : 'Pieces')} × $${item.price.toFixed(2)} = $${item.total.toFixed(2)} ${item.duePayment > 0 ? `(Due: $${item.duePayment.toFixed(2)})` : ''}</span>
                     </div>
                 `).join('')}
             </div>
@@ -326,62 +360,265 @@ function exportToExcel() {
         return;
     }
     
-    // Prepare data for Excel
-    const excelData = [];
+    // Sort by date (oldest first for better readability)
+    dataToExport.sort((a, b) => new Date(a.date) - new Date(b.date));
     
-    // Add header
-    excelData.push(['Date', 'Item Name', 'Price (per KG)', 'Weight (KG)', 'Item Total', 'Daily Total']);
-    
-    dataToExport.forEach(record => {
-        record.items.forEach((item, index) => {
-            excelData.push([
-                record.date,
-                item.name,
-                item.price,
-                item.quantity,
-                item.total,
-                index === 0 ? record.dailyTotal : '' // Show daily total only in first row
-            ]);
-        });
-        // Add empty row between dates
-        excelData.push(['', '', '', '', '', '']);
-    });
-    
-    // Create workbook and worksheet
+    // Create workbook
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(excelData);
     
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Sales Data');
+    // Create main sales sheet
+    createSalesSheet(wb, dataToExport);
+    
+    // Create summary sheet
+    createSummarySheet(wb, dataToExport);
     
     // Generate filename
-    let filename = 'Tarek_Enterprise_Sales';
+    let filename = 'Tarek_Enterprise_Sales_Report';
     if (searchDate) {
         filename += `_${searchDate}`;
     } else if (searchMonth) {
-        filename += `_${searchMonth}`;
+        filename += `_${searchMonth.replace('-', '_')}`;
     } else {
         filename += `_All_Records`;
     }
-    filename += '.xlsx';
+    filename += `_${new Date().toISOString().split('T')[0]}.xlsx`;
     
     // Save file
     XLSX.writeFile(wb, filename);
 }
 
+// Create detailed sales sheet
+function createSalesSheet(wb, dataToExport) {
+    const salesData = [];
+    
+    // Add main header
+    salesData.push(['TAREK ENTERPRISE - SALES REPORT']);
+    salesData.push(['Generated on: ' + new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })]);
+    salesData.push([]); // Empty row
+    
+    // Add column headers
+    salesData.push([
+        'Date',
+        'Item Name',
+        'Category',
+        'Customer Name',
+        'Price per Unit',
+        'Quantity',
+        'Unit',
+        'Item Total',
+        'Due Payment',
+        'Daily Total'
+    ]);
+    
+    let grandTotal = 0;
+    let totalDue = 0;
+    
+    // Process each date
+    dataToExport.forEach((record, recordIndex) => {
+        const formattedDate = formatDate(record.date);
+        
+        // Add date separator
+        if (recordIndex > 0) {
+            salesData.push([]); // Empty row between dates
+        }
+        
+        // Add items for this date
+        record.items.forEach((item, itemIndex) => {
+            const unit = item.unit || (item.category === 'raw' ? 'KG' : 'Pieces');
+            const categoryName = item.category === 'raw' ? 'Raw Materials' : 'Furniture Materials';
+            
+            salesData.push([
+                itemIndex === 0 ? formattedDate : '', // Show date only on first item
+                item.name,
+                categoryName,
+                item.customerName || 'N/A',
+                `$${item.price.toFixed(2)}`,
+                item.quantity,
+                unit,
+                `$${item.total.toFixed(2)}`,
+                item.duePayment > 0 ? `$${item.duePayment.toFixed(2)}` : '$0.00',
+                itemIndex === 0 ? `$${record.dailyTotal.toFixed(2)}` : '' // Show daily total only on first item
+            ]);
+            
+            if (itemIndex === 0) {
+                grandTotal += record.dailyTotal;
+            }
+            totalDue += (item.duePayment || 0);
+        });
+    });
+    
+    // Add summary totals
+    salesData.push([]); // Empty row
+    salesData.push(['SUMMARY']);
+    salesData.push(['Total Records:', dataToExport.length]);
+    salesData.push(['Total Sales Amount:', `$${grandTotal.toFixed(2)}`]);
+    salesData.push(['Total Due Payments:', `$${totalDue.toFixed(2)}`]);
+    salesData.push(['Net Amount Received:', `$${(grandTotal - totalDue).toFixed(2)}`]);
+    
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(salesData);
+    
+    // Set column widths
+    ws['!cols'] = [
+        { width: 15 }, // Date
+        { width: 20 }, // Item Name
+        { width: 18 }, // Category
+        { width: 20 }, // Customer Name
+        { width: 15 }, // Price per Unit
+        { width: 12 }, // Quantity
+        { width: 10 }, // Unit
+        { width: 15 }, // Item Total
+        { width: 15 }, // Due Payment
+        { width: 15 }  // Daily Total
+    ];
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales Details');
+}
+
+// Create summary sheet
+function createSummarySheet(wb, dataToExport) {
+    const summaryData = [];
+    
+    // Add header
+    summaryData.push(['TAREK ENTERPRISE - DAILY SUMMARY']);
+    summaryData.push(['Generated on: ' + new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    })]);
+    summaryData.push([]); // Empty row
+    
+    // Add column headers
+    summaryData.push([
+        'Date',
+        'Total Items Sold',
+        'Raw Materials (KG)',
+        'Furniture (Pieces)',
+        'Daily Sales',
+        'Due Payments',
+        'Net Received'
+    ]);
+    
+    let totalSales = 0;
+    let totalDue = 0;
+    let totalRawMaterials = 0;
+    let totalFurniture = 0;
+    
+    // Process each date
+    dataToExport.forEach(record => {
+        const formattedDate = formatDate(record.date);
+        const itemCount = record.items.length;
+        
+        // Calculate category totals
+        let rawMaterialsQty = 0;
+        let furnitureQty = 0;
+        let dailyDue = 0;
+        
+        record.items.forEach(item => {
+            if (item.category === 'raw') {
+                rawMaterialsQty += item.quantity;
+            } else {
+                furnitureQty += item.quantity;
+            }
+            dailyDue += (item.duePayment || 0);
+        });
+        
+        summaryData.push([
+            formattedDate,
+            itemCount,
+            rawMaterialsQty > 0 ? `${rawMaterialsQty} KG` : '0 KG',
+            furnitureQty > 0 ? `${furnitureQty} Pieces` : '0 Pieces',
+            `$${record.dailyTotal.toFixed(2)}`,
+            `$${dailyDue.toFixed(2)}`,
+            `$${(record.dailyTotal - dailyDue).toFixed(2)}`
+        ]);
+        
+        totalSales += record.dailyTotal;
+        totalDue += dailyDue;
+        totalRawMaterials += rawMaterialsQty;
+        totalFurniture += furnitureQty;
+    });
+    
+    // Add totals
+    summaryData.push([]); // Empty row
+    summaryData.push([
+        'TOTALS',
+        dataToExport.reduce((sum, record) => sum + record.items.length, 0),
+        `${totalRawMaterials} KG`,
+        `${totalFurniture} Pieces`,
+        `$${totalSales.toFixed(2)}`,
+        `$${totalDue.toFixed(2)}`,
+        `$${(totalSales - totalDue).toFixed(2)}`
+    ]);
+    
+    // Customer analysis
+    summaryData.push([]); // Empty row
+    summaryData.push(['CUSTOMER ANALYSIS']);
+    summaryData.push(['Customer Name', 'Total Purchases', 'Total Due']);
+    
+    // Group by customer
+    const customerData = {};
+    dataToExport.forEach(record => {
+        record.items.forEach(item => {
+            const customer = item.customerName || 'Unknown';
+            if (!customerData[customer]) {
+                customerData[customer] = { total: 0, due: 0 };
+            }
+            customerData[customer].total += item.total;
+            customerData[customer].due += (item.duePayment || 0);
+        });
+    });
+    
+    // Add customer data
+    Object.entries(customerData)
+        .sort(([,a], [,b]) => b.total - a.total) // Sort by total purchases
+        .forEach(([customer, data]) => {
+            summaryData.push([
+                customer,
+                `$${data.total.toFixed(2)}`,
+                `$${data.due.toFixed(2)}`
+            ]);
+        });
+    
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(summaryData);
+    
+    // Set column widths
+    ws['!cols'] = [
+        { width: 15 }, // Date/Customer
+        { width: 15 }, // Total Items/Purchases
+        { width: 18 }, // Raw Materials
+        { width: 18 }, // Furniture
+        { width: 15 }, // Daily Sales
+        { width: 15 }, // Due Payments
+        { width: 15 }  // Net Received
+    ];
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Summary & Analysis');
+}
+
 // Stock Management Functions
 
 // Add new stock
-function addStock(event) {
+function addStock(event, category) {
     event.preventDefault();
     
-    const productName = document.getElementById('product-name').value.trim();
-    const buyingPrice = parseFloat(document.getElementById('buying-price').value);
-    const sellingPrice = parseFloat(document.getElementById('selling-price').value);
-    const weight = parseFloat(document.getElementById('stock-quantity').value);
+    const prefix = category === 'raw' ? 'raw' : 'furniture';
+    const productName = document.getElementById(`${prefix}-product-name`).value.trim();
+    const buyingPrice = parseFloat(document.getElementById(`${prefix}-buying-price`).value);
+    const sellingPrice = parseFloat(document.getElementById(`${prefix}-selling-price`).value);
+    const quantity = parseFloat(document.getElementById(`${prefix}-stock-quantity`).value);
     
-    if (!productName || buyingPrice <= 0 || sellingPrice <= 0 || weight <= 0) {
-        alert('Please fill in all fields with valid values.');
+    if (!productName || buyingPrice <= 0 || sellingPrice <= 0 || quantity <= 0) {
+        alert('Please fill in all required fields with valid values.');
         return;
     }
     
@@ -391,15 +628,16 @@ function addStock(event) {
         }
     }
     
-    // Get existing stock data
-    let stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
+    // Get existing stock data for this category
+    const storageKey = `tarekStockData_${category}`;
+    let stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
     
     // Check if product already exists
     const existingIndex = stockData.findIndex(item => item.name.toLowerCase() === productName.toLowerCase());
     
     if (existingIndex !== -1) {
         if (confirm(`Product "${productName}" already exists. Do you want to add to existing stock?`)) {
-            stockData[existingIndex].quantity += weight;
+            stockData[existingIndex].quantity += quantity;
             stockData[existingIndex].buyingPrice = buyingPrice; // Update prices
             stockData[existingIndex].sellingPrice = sellingPrice;
             stockData[existingIndex].updatedAt = new Date().toISOString();
@@ -413,7 +651,9 @@ function addStock(event) {
             name: productName,
             buyingPrice: buyingPrice,
             sellingPrice: sellingPrice,
-            quantity: weight,
+            quantity: quantity,
+            category: category,
+            unit: category === 'raw' ? 'KG' : 'Pieces',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -421,26 +661,28 @@ function addStock(event) {
     }
     
     // Save to localStorage
-    localStorage.setItem('tarekStockData', JSON.stringify(stockData));
+    localStorage.setItem(storageKey, JSON.stringify(stockData));
     
     alert('Stock added successfully!');
-    document.getElementById('stock-form').reset();
-    loadStockList();
+    document.getElementById(`${prefix}-stock-form`).reset();
+    loadStockList(category);
     populateProductDropdowns();
 }
 
 // Load and display stock list
-function loadStockList() {
-    const stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
-    displayStockItems(stockData);
+function loadStockList(category) {
+    const storageKey = `tarekStockData_${category}`;
+    const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+    displayStockItems(stockData, category);
 }
 
 // Display stock items
-function displayStockItems(items) {
-    const stockList = document.getElementById('stock-list');
-    const totalProducts = document.getElementById('total-products');
-    const totalStockValue = document.getElementById('total-stock-value');
-    const lowStockCount = document.getElementById('low-stock-count');
+function displayStockItems(items, category) {
+    const prefix = category === 'raw' ? 'raw' : 'furniture';
+    const stockList = document.getElementById(`${prefix}-stock-list`);
+    const totalProducts = document.getElementById(`${prefix}-total-products`);
+    const totalStockValue = document.getElementById(`${prefix}-total-stock-value`);
+    const lowStockCount = document.getElementById(`${prefix}-low-stock-count`);
     
     if (items.length === 0) {
         stockList.innerHTML = '<div class="no-stock">No stock items found.</div>';
@@ -468,7 +710,7 @@ function displayStockItems(items) {
             <div class="stock-item ${stockClass}">
                 <div class="stock-header">
                     <span class="stock-name">${item.name}</span>
-                    <span class="stock-quantity ${quantityClass}">Stock: ${item.quantity} KG</span>
+                    <span class="stock-quantity ${quantityClass}">Stock: ${item.quantity} ${item.unit || (item.category === 'raw' ? 'KG' : 'Pieces')}</span>
                 </div>
                 <div class="stock-details">
                     <div class="stock-detail-item">
@@ -489,8 +731,8 @@ function displayStockItems(items) {
                     </div>
                 </div>
                 <div class="stock-actions">
-                    <button class="edit-stock" onclick="editStock('${item.id}')">Edit</button>
-                    <button class="delete-stock" onclick="deleteStock('${item.id}')">Delete</button>
+                    <button class="edit-stock" onclick="editStock('${item.id}', '${category}')">Edit</button>
+                    <button class="delete-stock" onclick="deleteStock('${item.id}', '${category}')">Delete</button>
                 </div>
             </div>
         `;
@@ -498,47 +740,54 @@ function displayStockItems(items) {
 }
 
 // Search stock
-function searchStock() {
-    const searchTerm = document.getElementById('stock-search').value.toLowerCase();
-    const stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
+function searchStock(category) {
+    const prefix = category === 'raw' ? 'raw' : 'furniture';
+    const searchTerm = document.getElementById(`${prefix}-stock-search`).value.toLowerCase();
+    const storageKey = `tarekStockData_${category}`;
+    const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
     
     const filteredData = stockData.filter(item => 
         item.name.toLowerCase().includes(searchTerm)
     );
     
-    displayStockItems(filteredData);
+    displayStockItems(filteredData, category);
 }
 
 // Show all stock
-function showAllStock() {
-    document.getElementById('stock-search').value = '';
-    loadStockList();
+function showAllStock(category) {
+    const prefix = category === 'raw' ? 'raw' : 'furniture';
+    document.getElementById(`${prefix}-stock-search`).value = '';
+    loadStockList(category);
 }
 
 // Edit stock item
-function editStock(itemId) {
-    const stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
+function editStock(itemId, category) {
+    const storageKey = `tarekStockData_${category}`;
+    const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
     const item = stockData.find(stock => stock.id === itemId);
     
     if (!item) return;
     
-    const newWeight = prompt(`Edit weight for "${item.name}" (KG):`, item.quantity);
+    const unit = item.unit || (item.category === 'raw' ? 'KG' : 'Pieces');
+    const quantityLabel = category === 'raw' ? 'weight' : 'quantity';
+    
+    const newQuantity = prompt(`Edit ${quantityLabel} for "${item.name}" (${unit}):`, item.quantity);
     const newBuyingPrice = prompt(`Edit buying price for "${item.name}":`, item.buyingPrice);
     const newSellingPrice = prompt(`Edit selling price for "${item.name}":`, item.sellingPrice);
     
-    if (newWeight !== null && newBuyingPrice !== null && newSellingPrice !== null) {
-        const weight = parseFloat(newWeight);
+    if (newQuantity !== null && newBuyingPrice !== null && newSellingPrice !== null) {
+        const quantity = parseFloat(newQuantity);
         const buyingPrice = parseFloat(newBuyingPrice);
         const sellingPrice = parseFloat(newSellingPrice);
         
-        if (weight >= 0 && buyingPrice > 0 && sellingPrice > 0) {
-            item.quantity = weight;
+        if (quantity >= 0 && buyingPrice > 0 && sellingPrice > 0) {
+            item.quantity = quantity;
             item.buyingPrice = buyingPrice;
             item.sellingPrice = sellingPrice;
             item.updatedAt = new Date().toISOString();
             
-            localStorage.setItem('tarekStockData', JSON.stringify(stockData));
-            loadStockList();
+            localStorage.setItem(storageKey, JSON.stringify(stockData));
+            loadStockList(category);
             populateProductDropdowns();
         } else {
             alert('Please enter valid values.');
@@ -547,13 +796,14 @@ function editStock(itemId) {
 }
 
 // Delete stock item
-function deleteStock(itemId) {
+function deleteStock(itemId, category) {
     if (confirm('Are you sure you want to delete this stock item?')) {
-        let stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
+        const storageKey = `tarekStockData_${category}`;
+        let stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
         stockData = stockData.filter(item => item.id !== itemId);
         
-        localStorage.setItem('tarekStockData', JSON.stringify(stockData));
-        loadStockList();
+        localStorage.setItem(storageKey, JSON.stringify(stockData));
+        loadStockList(category);
         populateProductDropdowns();
     }
 }
@@ -567,15 +817,18 @@ function populateProductDropdowns() {
 }
 
 function populateProductDropdown(dropdown) {
-    const stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
-    const availableStock = stockData.filter(item => item.quantity > 0);
+    // Get stock from both categories
+    const rawStockData = JSON.parse(localStorage.getItem('tarekStockData_raw')) || [];
+    const furnitureStockData = JSON.parse(localStorage.getItem('tarekStockData_furniture')) || [];
+    const allStock = [...rawStockData, ...furnitureStockData];
+    const availableStock = allStock.filter(item => item.quantity > 0);
     
     dropdown.innerHTML = '<option value="">Select Item</option>';
     
     availableStock.forEach(item => {
         const option = document.createElement('option');
-        option.value = item.name;
-        option.textContent = `${item.name} (Stock: ${item.quantity} KG)`;
+        option.value = `${item.name}|${item.category}`;
+        option.textContent = `${item.name} (${item.category === 'raw' ? 'Raw' : 'Furniture'}) - Stock: ${item.quantity} ${item.unit || (item.category === 'raw' ? 'KG' : 'Pieces')}`;
         dropdown.appendChild(option);
     });
 }
@@ -588,13 +841,27 @@ function updateProductDetails(dropdown) {
     const quantityInput = itemRow.querySelector('.item-quantity');
     
     if (dropdown.value) {
-        const stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
-        const selectedItem = stockData.find(item => item.name === dropdown.value);
+        const [productName, category] = dropdown.value.split('|');
+        const storageKey = `tarekStockData_${category}`;
+        const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+        const selectedItem = stockData.find(item => item.name === productName);
         
         if (selectedItem) {
             priceInput.value = selectedItem.sellingPrice.toFixed(2);
-            stockSpan.textContent = `Stock: ${selectedItem.quantity} KG`;
+            const unit = selectedItem.unit || (selectedItem.category === 'raw' ? 'KG' : 'Pieces');
+            stockSpan.textContent = `Stock: ${selectedItem.quantity} ${unit}`;
             quantityInput.max = selectedItem.quantity;
+            
+            // Update placeholder and step based on category
+            if (selectedItem.category === 'raw') {
+                quantityInput.placeholder = 'Weight (KG)';
+                quantityInput.step = '0.1';
+                quantityInput.min = '0.1';
+            } else {
+                quantityInput.placeholder = 'Quantity (Pieces)';
+                quantityInput.step = '1';
+                quantityInput.min = '1';
+            }
             
             if (selectedItem.quantity <= 5) {
                 stockSpan.classList.add('low-stock');
@@ -604,8 +871,11 @@ function updateProductDetails(dropdown) {
         }
     } else {
         priceInput.value = '';
-        stockSpan.textContent = 'Stock: 0 KG';
+        stockSpan.textContent = 'Stock: 0';
         quantityInput.max = '';
+        quantityInput.placeholder = 'Quantity';
+        quantityInput.step = '0.1';
+        quantityInput.min = '0.1';
         stockSpan.classList.remove('low-stock');
     }
     
@@ -615,15 +885,16 @@ function updateProductDetails(dropdown) {
 
 // Update stock after sale
 function updateStockAfterSale(soldItems) {
-    let stockData = JSON.parse(localStorage.getItem('tarekStockData')) || [];
-    
     soldItems.forEach(soldItem => {
+        const storageKey = `tarekStockData_${soldItem.category}`;
+        let stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+        
         const stockItem = stockData.find(item => item.name === soldItem.name);
         if (stockItem) {
             stockItem.quantity -= soldItem.quantity;
             stockItem.updatedAt = new Date().toISOString();
         }
+        
+        localStorage.setItem(storageKey, JSON.stringify(stockData));
     });
-    
-    localStorage.setItem('tarekStockData', JSON.stringify(stockData));
 }
