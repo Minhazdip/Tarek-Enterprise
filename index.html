@@ -37,9 +37,11 @@
                                     <option value="">Select Item</option>
                                 </select>
                                 <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" required readonly>
-                                <input type="number" placeholder="Weight (KG)" class="item-quantity" step="0.1" min="0.1" required>
-                                <span class="stock-available">Stock: 0 KG</span>
+                                <input type="number" placeholder="Quantity" class="item-quantity" step="0.1" min="0.1" required>
+                                <span class="stock-available">Stock: 0</span>
                                 <span class="item-total">0.00</span>
+                                <input type="text" placeholder="Customer Name" class="customer-name" required>
+                                <input type="number" placeholder="Due Payment" class="due-payment" step="0.01" min="0">
                                 <button type="button" class="remove-item" onclick="removeItem(this)">×</button>
                             </div>
                         </div>
@@ -63,18 +65,84 @@
             <div class="card">
                 <h2>Stock Management</h2>
                 
-                <!-- Add New Stock Form -->
-                <div class="stock-form-section">
-                    <h3>Add New Stock</h3>
-                    <form id="stock-form">
-                        <div class="stock-input-row">
-                            <input type="text" id="product-name" placeholder="Product Name" required>
-                            <input type="number" id="buying-price" placeholder="Buying Price" step="0.01" min="0" required>
-                            <input type="number" id="selling-price" placeholder="Selling Price" step="0.01" min="0" required>
-                            <input type="number" id="stock-quantity" placeholder="Weight (KG)" step="0.1" min="0.1" required>
-                            <button type="submit">Add Stock</button>
+                <!-- Category Selection -->
+                <div class="category-tabs">
+                    <button class="category-btn active" onclick="showCategory('raw-materials')">Raw Materials</button>
+                    <button class="category-btn" onclick="showCategory('furniture-materials')">Furniture Materials</button>
+                </div>
+
+                <!-- Raw Materials Section -->
+                <div id="raw-materials" class="category-section active">
+                    <div class="stock-form-section">
+                        <h3>Add Raw Materials Stock</h3>
+                        <form id="raw-stock-form">
+                            <div class="stock-input-grid">
+                                <input type="text" id="raw-product-name" placeholder="Product Name" required>
+                                <input type="number" id="raw-buying-price" placeholder="Buying Price" step="0.01" min="0" required>
+                                <input type="number" id="raw-selling-price" placeholder="Selling Price" step="0.01" min="0" required>
+                                <input type="number" id="raw-stock-quantity" placeholder="Weight (KG)" step="0.1" min="0.1" required>
+                                <button type="submit">Add Raw Material</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="current-stock-section">
+                        <h3>Raw Materials Stock</h3>
+                        <div class="stock-search">
+                            <input type="text" id="raw-stock-search" placeholder="Search raw materials...">
+                            <button onclick="searchStock('raw')">Search</button>
+                            <button onclick="showAllStock('raw')">Show All</button>
                         </div>
-                    </form>
+                        <div class="stock-summary">
+                            <div class="summary-card">
+                                <h4>Total Products: <span id="raw-total-products">0</span></h4>
+                                <h4>Total Stock Value: $<span id="raw-total-stock-value">0.00</span></h4>
+                                <h4>Low Stock Items: <span id="raw-low-stock-count">0</span></h4>
+                            </div>
+                        </div>
+                        <div class="stock-container">
+                            <div id="raw-stock-list">
+                                <!-- Raw materials stock items will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Furniture Materials Section -->
+                <div id="furniture-materials" class="category-section">
+                    <div class="stock-form-section">
+                        <h3>Add Furniture Materials Stock</h3>
+                        <form id="furniture-stock-form">
+                            <div class="stock-input-grid">
+                                <input type="text" id="furniture-product-name" placeholder="Product Name" required>
+                                <input type="number" id="furniture-buying-price" placeholder="Buying Price" step="0.01" min="0" required>
+                                <input type="number" id="furniture-selling-price" placeholder="Selling Price" step="0.01" min="0" required>
+                                <input type="number" id="furniture-stock-quantity" placeholder="Quantity (Pieces)" step="1" min="1" required>
+                                <button type="submit">Add Furniture Material</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="current-stock-section">
+                        <h3>Furniture Materials Stock</h3>
+                        <div class="stock-search">
+                            <input type="text" id="furniture-stock-search" placeholder="Search furniture materials...">
+                            <button onclick="searchStock('furniture')">Search</button>
+                            <button onclick="showAllStock('furniture')">Show All</button>
+                        </div>
+                        <div class="stock-summary">
+                            <div class="summary-card">
+                                <h4>Total Products: <span id="furniture-total-products">0</span></h4>
+                                <h4>Total Stock Value: $<span id="furniture-total-stock-value">0.00</span></h4>
+                                <h4>Low Stock Items: <span id="furniture-low-stock-count">0</span></h4>
+                            </div>
+                        </div>
+                        <div class="stock-container">
+                            <div id="furniture-stock-list">
+                                <!-- Furniture materials stock items will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Current Stock Display -->
