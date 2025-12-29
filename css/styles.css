@@ -124,7 +124,7 @@ header p {
 
 .item-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1.5fr 1fr auto;
     gap: 10px;
     align-items: center;
     margin-bottom: 10px;
@@ -563,5 +563,91 @@ header p {
     .item-row {
         grid-template-columns: 1fr;
         gap: 5px;
+    }
+}
+/* Category Management Styles */
+.category-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.category-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    color: #666;
+}
+
+.category-btn:hover {
+    background: #e9ecef;
+}
+
+.category-btn.active {
+    background: #28a745;
+    color: white;
+}
+
+.category-section {
+    display: none;
+}
+
+.category-section.active {
+    display: block;
+}
+
+.stock-input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+.stock-input-grid input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.stock-input-grid button {
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    grid-column: span 2;
+    justify-self: center;
+    min-width: 200px;
+}
+
+.stock-input-grid button:hover {
+    background: #218838;
+}
+
+@media (max-width: 768px) {
+    .stock-input-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .stock-input-grid button {
+        grid-column: span 1;
+        justify-self: stretch;
+    }
+    
+    .category-tabs {
+        flex-direction: column;
     }
 }
