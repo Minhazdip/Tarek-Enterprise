@@ -16,6 +16,7 @@
         <nav class="tabs">
             <button class="tab-btn active" onclick="showTab('sales-entry', this)">Add Sales</button>
             <button class="tab-btn" onclick="showTab('add-stock', this)">Add Stock</button>
+            <button class="tab-btn" onclick="showTab('daily-expenses', this)">Daily Expenses</button>
             <button class="tab-btn" onclick="showTab('sales-history', this)">Sales History</button>
         </nav>
 
@@ -141,6 +142,78 @@
                             <div id="furniture-stock-list">
                                 <!-- Furniture materials stock items will be displayed here -->
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Expenses Tab -->
+        <div id="daily-expenses" class="tab-content">
+            <div class="card">
+                <h2>Daily Expenses Management</h2>
+                
+                <!-- Add Expense Form -->
+                <div class="expense-form-section">
+                    <h3>Add Daily Expense</h3>
+                    <form id="expense-form">
+                        <div class="expense-input-row">
+                            <div class="form-group">
+                                <label for="expense-date">Date:</label>
+                                <input type="date" id="expense-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-name">Expense Name:</label>
+                                <input type="text" id="expense-name" placeholder="e.g., Electricity Bill, Employee Snacks" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-description">Description (Optional):</label>
+                                <input type="text" id="expense-description" placeholder="Additional details">
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-amount">Amount:</label>
+                                <input type="number" id="expense-amount" placeholder="0.00" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit">Add Expense</button>
+                            <button type="button" onclick="clearExpenseForm()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Expense Summary -->
+                <div class="expense-summary-section">
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <h4>Today's Expenses</h4>
+                            <span class="amount" id="today-expenses">$0.00</span>
+                        </div>
+                        <div class="summary-card">
+                            <h4>This Month</h4>
+                            <span class="amount" id="month-expenses">$0.00</span>
+                        </div>
+                        <div class="summary-card">
+                            <h4>Total Records</h4>
+                            <span class="count" id="total-expense-records">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expense History -->
+                <div class="expense-history-section">
+                    <h3>Expense History</h3>
+                    <div class="expense-search">
+                        <input type="date" id="expense-search-date" placeholder="Search by date">
+                        <input type="month" id="expense-search-month" placeholder="Search by month">
+                        <input type="text" id="expense-search-name" placeholder="Search by expense name">
+                        <button onclick="searchExpenses()">Search</button>
+                        <button onclick="showAllExpenses()">Show All</button>
+                        <button onclick="exportExpensesToExcel()" class="export-btn">Export to Excel</button>
+                    </div>
+                    <div class="expense-container">
+                        <div id="expense-list">
+                            <!-- Expense records will be displayed here -->
                         </div>
                     </div>
                 </div>
