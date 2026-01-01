@@ -5,13 +5,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load and display sales history
     loadSalesHistory();
-    loadStockList();
+    loadStockList('raw');
+    loadStockList('furniture');
+    loadExpenseHistory();
     populateProductDropdowns();
     
     // Add event listeners
     document.getElementById('sales-form').addEventListener('submit', saveSales);
     document.getElementById('raw-stock-form').addEventListener('submit', function(e) { addStock(e, 'raw'); });
     document.getElementById('furniture-stock-form').addEventListener('submit', function(e) { addStock(e, 'furniture'); });
+    document.getElementById('expense-form').addEventListener('submit', addExpense);
     
     // Add input listeners for automatic calculation
     document.addEventListener('input', function(e) {
@@ -63,6 +66,8 @@ function showTab(tabName, clickedButton) {
         loadStockList('furniture');
     } else if (tabName === 'sales-entry') {
         populateProductDropdowns();
+    } else if (tabName === 'daily-expenses') {
+        loadExpenseHistory();
     }
 }
 
@@ -77,7 +82,10 @@ function showCategory(categoryName, clickedButton) {
     categoryButtons.forEach(btn => btn.classList.remove('active'));
     
     // Show selected category
-    document.getElementById(categoryName).classList.add('active');
+    const targetSection = document.getElementById(categoryName);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
     
     // Add active class to clicked button
     if (clickedButton) {
@@ -908,3 +916,278 @@ function updateStockAfterSale(soldItems) {
         localStorage.setItem(storageKey, JSON.stringify(stockData));
     });
 }
+// Daily Expenses Management Functions
+
+// Add new expense
+function addExpense(event) {
+    event.preventDefault();
+    
+    const date = document.getElementById('expense-date').value;
+    const name = document.getElementById('expense-name').value.trim();
+    const description = document.getElementById('expense-description').value.trim();
+    const amount = parseFloat(document.getElementById('expense-amount').value);
+    
+    if (!date || !name || amount <= 0) {
+        alert('Please fill in all required fields with valid values.');
+        return;
+    }
+    
+    // Create expense record
+    const expenseRecord = {
+        id: Date.now().toString(),
+        date: date,
+        name: name,
+        description: description,
+        amount: amount,
+        createdAt: new Date().toISOString()
+    };
+    
+    // Save to localStorage
+    let expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    expenseData.push(expenseRecord);
+    
+    // Sort by date (newest first)
+    expenseData.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    localStorage.setItem('tarekExpenseData', JSON.stringify(expenseData));
+    
+    alert('Expense added successfully!');
+    clearExpenseForm();
+    loadExpenseHistory();
+    updateExpenseSummary();
+}
+
+// Clear expense form
+function clearExpenseForm() {
+    document.getElementById('expense-form').reset();
+    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+}
+
+// Load and display expense history
+function loadExpenseHistory() {
+    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    displayExpenseRecords(expenseData);
+    updateExpenseSummary();
+}
+
+// Display expense records
+function displayExpenseRecords(records) {
+    const expenseList = document.getElementById('expense-list');
+    
+    if (records.length === 0) {
+        expenseList.innerHTML = '<div class="no-expenses">No expense records found.</div>';
+        return;
+    }
+    
+    // Generate HTML for records
+    expenseList.innerHTML = records.map(record => `
+        <div class="expense-record">
+            <div class="expense-header">
+                <span class="expense-name">${record.name}</span>
+                <span class="expense-amount">$${record.amount.toFixed(2)}</span>
+            </div>
+            ${record.description ? `<div class="expense-details">${record.description}</div>` : ''}
+            <div class="expense-date">Date: ${formatDate(record.date)}</div>
+            <div class="expense-actions">
+                <button class="edit-expense" onclick="editExpense('${record.id}')">Edit</button>
+                <button class="delete-expense" onclick="deleteExpense('${record.id}')">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Update expense summary
+function updateExpenseSummary() {
+    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    const today = new Date().toISOString().split('T')[0];
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    
+    // Calculate today's expenses
+    const todayExpenses = expenseData
+        .filter(record => record.date === today)
+        .reduce((sum, record) => sum + record.amount, 0);
+    
+    // Calculate this month's expenses
+    const monthExpenses = expenseData
+        .filter(record => record.date.startsWith(currentMonth))
+        .reduce((sum, record) => sum + record.amount, 0);
+    
+    // Update display
+    document.getElementById('today-expenses').textContent = `$${todayExpenses.toFixed(2)}`;
+    document.getElementById('month-expenses').textContent = `$${monthExpenses.toFixed(2)}`;
+    document.getElementById('total-expense-records').textContent = expenseData.length;
+}
+
+// Search expenses
+function searchExpenses() {
+    const searchDate = document.getElementById('expense-search-date').value;
+    const searchMonth = document.getElementById('expense-search-month').value;
+    const searchName = document.getElementById('expense-search-name').value.toLowerCase();
+    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    
+    let filteredData = expenseData;
+    
+    if (searchDate) {
+        filteredData = filteredData.filter(record => record.date === searchDate);
+    } else if (searchMonth) {
+        filteredData = filteredData.filter(record => record.date.startsWith(searchMonth));
+    }
+    
+    if (searchName) {
+        filteredData = filteredData.filter(record => 
+            record.name.toLowerCase().includes(searchName) ||
+            (record.description && record.description.toLowerCase().includes(searchName))
+        );
+    }
+    
+    displayExpenseRecords(filteredData);
+}
+
+// Show all expenses
+function showAllExpenses() {
+    document.getElementById('expense-search-date').value = '';
+    document.getElementById('expense-search-month').value = '';
+    document.getElementById('expense-search-name').value = '';
+    loadExpenseHistory();
+}
+
+// Edit expense
+function editExpense(expenseId) {
+    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    const expense = expenseData.find(record => record.id === expenseId);
+    
+    if (!expense) return;
+    
+    const newName = prompt(`Edit expense name:`, expense.name);
+    const newDescription = prompt(`Edit description:`, expense.description || '');
+    const newAmount = prompt(`Edit amount:`, expense.amount);
+    
+    if (newName !== null && newAmount !== null) {
+        const amount = parseFloat(newAmount);
+        
+        if (newName.trim() && amount > 0) {
+            expense.name = newName.trim();
+            expense.description = newDescription ? newDescription.trim() : '';
+            expense.amount = amount;
+            expense.updatedAt = new Date().toISOString();
+            
+            localStorage.setItem('tarekExpenseData', JSON.stringify(expenseData));
+            loadExpenseHistory();
+        } else {
+            alert('Please enter valid values.');
+        }
+    }
+}
+
+// Delete expense
+function deleteExpense(expenseId) {
+    if (confirm('Are you sure you want to delete this expense record?')) {
+        let expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+        expenseData = expenseData.filter(record => record.id !== expenseId);
+        
+        localStorage.setItem('tarekExpenseData', JSON.stringify(expenseData));
+        loadExpenseHistory();
+    }
+}
+
+// Export expenses to Excel
+function exportExpensesToExcel() {
+    const searchDate = document.getElementById('expense-search-date').value;
+    const searchMonth = document.getElementById('expense-search-month').value;
+    const searchName = document.getElementById('expense-search-name').value.toLowerCase();
+    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    
+    let dataToExport = expenseData;
+    
+    // Apply filters
+    if (searchDate) {
+        dataToExport = dataToExport.filter(record => record.date === searchDate);
+    } else if (searchMonth) {
+        dataToExport = dataToExport.filter(record => record.date.startsWith(searchMonth));
+    }
+    
+    if (searchName) {
+        dataToExport = dataToExport.filter(record => 
+            record.name.toLowerCase().includes(searchName) ||
+            (record.description && record.description.toLowerCase().includes(searchName))
+        );
+    }
+    
+    if (dataToExport.length === 0) {
+        alert('No expense data to export.');
+        return;
+    }
+    
+    // Sort by date (oldest first)
+    dataToExport.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Prepare data for Excel
+    const excelData = [];
+    
+    // Add header
+    excelData.push(['TAREK ENTERPRISE - EXPENSE REPORT']);
+    excelData.push(['Generated on: ' + new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })]);
+    excelData.push([]); // Empty row
+    
+    // Add column headers
+    excelData.push(['Date', 'Expense Name', 'Description', 'Amount']);
+    
+    let totalAmount = 0;
+    
+    // Add expense data
+    dataToExport.forEach(record => {
+        excelData.push([
+            record.date,
+            record.name,
+            record.description || '',
+            `$${record.amount.toFixed(2)}`
+        ]);
+        totalAmount += record.amount;
+    });
+    
+    // Add summary
+    excelData.push([]); // Empty row
+    excelData.push(['SUMMARY']);
+    excelData.push(['Total Records:', dataToExport.length]);
+    excelData.push(['Total Amount:', `$${totalAmount.toFixed(2)}`]);
+    
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
+    
+    // Set column widths
+    ws['!cols'] = [
+        { width: 15 }, // Date
+        { width: 25 }, // Expense Name
+        { width: 30 }, // Description
+        { width: 15 }  // Amount
+    ];
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Expense Report');
+    
+    // Generate filename
+    let filename = 'Tarek_Enterprise_Expenses';
+    if (searchDate) {
+        filename += `_${searchDate}`;
+    } else if (searchMonth) {
+        filename += `_${searchMonth.replace('-', '_')}`;
+    } else {
+        filename += `_All_Records`;
+    }
+    filename += `_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Save file
+    XLSX.writeFile(wb, filename);
+}
+
+// Initialize expense form with today's date
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+});
