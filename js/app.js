@@ -189,9 +189,9 @@ function saveSales(event) {
     let salesData = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
     const existingIndex = salesData.findIndex(r => r.date === date);
     if (existingIndex !== -1) {
-        if (confirm('A sales record for this date already exists. Replace it?')) {
-            salesData[existingIndex] = salesRecord;
-        } else return;
+        // Append new items to the existing record for that date
+        salesData[existingIndex].items = salesData[existingIndex].items.concat(items);
+        salesData[existingIndex].dailyTotal += dailyTotal;
     } else {
         salesData.push(salesRecord);
     }
