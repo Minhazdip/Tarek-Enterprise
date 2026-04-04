@@ -1,30 +1,24 @@
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    // Set today's date as default
     document.getElementById('sale-date').value = new Date().toISOString().split('T')[0];
-    
-    // Load and display sales history
     loadSalesHistory();
     loadStockList('raw');
     loadStockList('furniture');
     loadExpenseHistory();
     populateProductDropdowns();
-    
-    // Add event listeners
+
     document.getElementById('sales-form').addEventListener('submit', saveSales);
     document.getElementById('raw-stock-form').addEventListener('submit', function(e) { addStock(e, 'raw'); });
     document.getElementById('furniture-stock-form').addEventListener('submit', function(e) { addStock(e, 'furniture'); });
     document.getElementById('expense-form').addEventListener('submit', addExpense);
-    
-    // Add input listeners for automatic calculation
+
     document.addEventListener('input', function(e) {
         if (e.target.classList.contains('item-price') || e.target.classList.contains('item-quantity')) {
             calculateItemTotal(e.target.closest('.item-row'));
             calculateDailyTotal();
         }
     });
-    
-    // Add change listener for product selection
+
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('item-name')) {
             updateProductDetails(e.target);
@@ -32,88 +26,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Tab switching functionality
+// Tab switching
 function showTab(tabName, clickedButton) {
-    // Hide all tab contents
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(tab => tab.classList.remove('active'));
-    
-    // Remove active class from all tab buttons
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(btn => btn.classList.remove('active'));
-    
-    // Show selected tab
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById(tabName).classList.add('active');
-    
-    // Add active class to clicked button
     if (clickedButton) {
         clickedButton.classList.add('active');
-    } else {
-        // Fallback: find the button by tab name
-        const targetButton = Array.from(tabButtons).find(btn => 
-            btn.getAttribute('onclick').includes(tabName)
-        );
-        if (targetButton) {
-            targetButton.classList.add('active');
-        }
     }
-    
-    // Refresh data when switching tabs
-    if (tabName === 'sales-history') {
-        loadSalesHistory();
-    } else if (tabName === 'add-stock') {
-        loadStockList('raw');
-        loadStockList('furniture');
-    } else if (tabName === 'sales-entry') {
-        populateProductDropdowns();
-    } else if (tabName === 'daily-expenses') {
-        loadExpenseHistory();
-    }
+    if (tabName === 'sales-history') loadSalesHistory();
+    else if (tabName === 'add-stock') { loadStockList('raw'); loadStockList('furniture'); }
+    else if (tabName === 'sales-entry') populateProductDropdowns();
+    else if (tabName === 'daily-expenses') loadExpenseHistory();
 }
 
-// Category switching functionality
+// Category switching
 function showCategory(categoryName, clickedButton) {
-    // Hide all category sections
-    const categorySections = document.querySelectorAll('.category-section');
-    categorySections.forEach(section => section.classList.remove('active'));
-    
-    // Remove active class from all category buttons
-    const categoryButtons = document.querySelectorAll('.category-btn');
-    categoryButtons.forEach(btn => btn.classList.remove('active'));
-    
-    // Show selected category
-    const targetSection = document.getElementById(categoryName);
-    if (targetSection) {
-        targetSection.classList.add('active');
-    }
-    
-    // Add active class to clicked button
-    if (clickedButton) {
-        clickedButton.classList.add('active');
-    } else {
-        // Fallback: find the button by category name
-        const targetButton = Array.from(categoryButtons).find(btn => 
-            btn.getAttribute('onclick').includes(categoryName)
-        );
-        if (targetButton) {
-            targetButton.classList.add('active');
-        }
-    }
-    
-    // Load stock for the selected category
+    document.querySelectorAll('.category-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+    const target = document.getElementById(categoryName);
+    if (target) target.classList.add('active');
+    if (clickedButton) clickedButton.classList.add('active');
     const category = categoryName === 'raw-materials' ? 'raw' : 'furniture';
     loadStockList(category);
 }
 
-// Add new item row
+// Add item row
 function addItem() {
     const container = document.getElementById('items-container');
     const newRow = document.createElement('div');
     newRow.className = 'item-row';
     newRow.innerHTML = `
-        <select class="item-name" required>
-            <option value="">Select Item</option>
-        </select>
+        <select class="item-name" required><option value="">Select Item</option></select>
         <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" required readonly>
         <input type="number" placeholder="Quantity" class="item-quantity" step="0.1" min="0.1" required>
         <span class="stock-available">Stock: 0</span>
@@ -126,147 +70,162 @@ function addItem() {
     populateProductDropdown(newRow.querySelector('.item-name'));
 }
 
-// Remove item row
 function removeItem(button) {
-    const itemRow = button.closest('.item-row');
-    itemRow.remove();
+    button.closest('.item-row').remove();
     calculateDailyTotal();
 }
 
-// Calculate total for individual item
 function calculateItemTotal(itemRow) {
     const price = parseFloat(itemRow.querySelector('.item-price').value) || 0;
-    const weight = parseFloat(itemRow.querySelector('.item-quantity').value) || 0;
-    const total = price * weight;
-    
-    itemRow.querySelector('.item-total').textContent = total.toFixed(2);
+    const qty = parseFloat(itemRow.querySelector('.item-quantity').value) || 0;
+    itemRow.querySelector('.item-total').textContent = (price * qty).toFixed(2);
 }
 
-// Calculate daily total
 function calculateDailyTotal() {
-    const itemTotals = document.querySelectorAll('.item-total');
-    let dailyTotal = 0;
-    
-    itemTotals.forEach(total => {
-        dailyTotal += parseFloat(total.textContent) || 0;
-    });
-    
-    document.getElementById('daily-total').textContent = dailyTotal.toFixed(2);
+    let total = 0;
+    document.querySelectorAll('.item-total').forEach(t => { total += parseFloat(t.textContent) || 0; });
+    document.getElementById('daily-total').textContent = total.toFixed(2);
 }
 
-// Save sales data
+// Populate product dropdowns
+function populateProductDropdowns() {
+    document.querySelectorAll('.item-name').forEach(select => populateProductDropdown(select));
+}
+
+function populateProductDropdown(select) {
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Select Item</option>';
+    ['raw', 'furniture'].forEach(category => {
+        const storageKey = `tarekStockData_${category}`;
+        const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+        stockData.forEach(item => {
+            if (item.quantity > 0) {
+                const option = document.createElement('option');
+                option.value = `${item.name}|${category}`;
+                option.textContent = `${item.name} (${category === 'raw' ? 'Raw' : 'Furniture'}) - ${item.quantity} ${item.unit || (category === 'raw' ? 'KG' : 'Pieces')}`;
+                select.appendChild(option);
+            }
+        });
+    });
+    if (currentValue) select.value = currentValue;
+}
+
+function updateProductDetails(select) {
+    const row = select.closest('.item-row');
+    const selectedValue = select.value;
+    const stockAvailable = row.querySelector('.stock-available');
+    const priceInput = row.querySelector('.item-price');
+
+    if (!selectedValue) {
+        priceInput.value = '';
+        stockAvailable.textContent = 'Stock: 0';
+        stockAvailable.classList.remove('low-stock');
+        return;
+    }
+
+    const [productName, category] = selectedValue.split('|');
+    const storageKey = `tarekStockData_${category}`;
+    const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+    const stockItem = stockData.find(item => item.name === productName);
+
+    if (stockItem) {
+        priceInput.value = stockItem.sellingPrice;
+        const unit = stockItem.unit || (category === 'raw' ? 'KG' : 'Pieces');
+        stockAvailable.textContent = `Stock: ${stockItem.quantity} ${unit}`;
+        stockAvailable.classList.toggle('low-stock', stockItem.quantity <= 5);
+        calculateItemTotal(row);
+        calculateDailyTotal();
+    }
+}
+
+// Save sales
 function saveSales(event) {
     event.preventDefault();
-    
     const date = document.getElementById('sale-date').value;
     const itemRows = document.querySelectorAll('.item-row');
     const items = [];
-    
-    // Validate and collect items, check stock availability
     let isValid = true;
     let stockError = false;
-    
+
     itemRows.forEach(row => {
         const selectedValue = row.querySelector('.item-name').value.trim();
         const price = parseFloat(row.querySelector('.item-price').value);
         const weight = parseFloat(row.querySelector('.item-quantity').value);
         const customerName = row.querySelector('.customer-name').value.trim();
         const duePayment = parseFloat(row.querySelector('.due-payment').value) || 0;
-        
+
         if (selectedValue && price > 0 && weight > 0 && customerName) {
             const [productName, category] = selectedValue.split('|');
             const storageKey = `tarekStockData_${category}`;
             const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
             const stockItem = stockData.find(item => item.name === productName);
-            
-            if (!stockItem) {
-                alert(`Product "${productName}" not found in stock!`);
-                stockError = true;
-                return;
-            }
-            
+
+            if (!stockItem) { alert(`Product "${productName}" not found in stock!`); stockError = true; return; }
+
             if (stockItem.quantity < weight) {
-                const unit = stockItem.unit || (stockItem.category === 'raw' ? 'KG' : 'Pieces');
+                const unit = stockItem.unit || (category === 'raw' ? 'KG' : 'Pieces');
                 alert(`Insufficient stock for "${productName}". Available: ${stockItem.quantity} ${unit}, Requested: ${weight} ${unit}`);
                 stockError = true;
                 return;
             }
-            
-            items.push({
-                name: productName,
-                category: category,
-                price: price,
-                quantity: weight,
-                customerName: customerName,
-                duePayment: duePayment,
-                total: price * weight
-            });
+
+            const buyingPrice = stockItem.buyingPrice || 0;
+            items.push({ name: productName, category, price, buyingPrice, quantity: weight, customerName, duePayment, total: price * weight, profit: (price - buyingPrice) * weight });
         } else if (selectedValue || price || weight || customerName) {
             isValid = false;
         }
     });
-    
+
     if (!isValid || items.length === 0 || stockError) {
-        if (!stockError) {
-            alert('Please fill in all item details correctly or remove empty rows.');
-        }
+        if (!stockError) alert('Please fill in all item details correctly or remove empty rows.');
         return;
     }
-    
-    // Update stock quantities
+
     updateStockAfterSale(items);
-    
-    // Calculate daily total
+
     const dailyTotal = items.reduce((sum, item) => sum + item.total, 0);
-    
-    // Create sales record
-    const salesRecord = {
-        id: Date.now().toString(),
-        date: date,
-        items: items,
-        dailyTotal: dailyTotal,
-        createdAt: new Date().toISOString()
-    };
-    
-    // Save to localStorage
+    const salesRecord = { id: Date.now().toString(), date, items, dailyTotal, createdAt: new Date().toISOString() };
+
     let salesData = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
-    
-    // Check if there's already a record for this date
-    const existingIndex = salesData.findIndex(record => record.date === date);
+    const existingIndex = salesData.findIndex(r => r.date === date);
     if (existingIndex !== -1) {
-        if (confirm('A sales record for this date already exists. Do you want to replace it?')) {
+        if (confirm('A sales record for this date already exists. Replace it?')) {
             salesData[existingIndex] = salesRecord;
-        } else {
-            return;
-        }
+        } else return;
     } else {
         salesData.push(salesRecord);
     }
-    
-    // Sort by date (newest first)
+
     salesData.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
     localStorage.setItem('tarekSalesData', JSON.stringify(salesData));
-    
     alert('Sales record saved successfully!');
     clearForm();
     loadSalesHistory();
-    loadStockList();
+    loadStockList('raw');
+    loadStockList('furniture');
     populateProductDropdowns();
 }
 
-// Clear the form
+function updateStockAfterSale(items) {
+    items.forEach(item => {
+        const storageKey = `tarekStockData_${item.category}`;
+        const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+        const stockItem = stockData.find(s => s.name === item.name);
+        if (stockItem) {
+            stockItem.quantity = Math.max(0, stockItem.quantity - item.quantity);
+            stockItem.updatedAt = new Date().toISOString();
+        }
+        localStorage.setItem(storageKey, JSON.stringify(stockData));
+    });
+}
+
 function clearForm() {
     document.getElementById('sales-form').reset();
     document.getElementById('sale-date').value = new Date().toISOString().split('T')[0];
-    
-    // Keep only one item row
     const container = document.getElementById('items-container');
     container.innerHTML = `
         <div class="item-row">
-            <select class="item-name" required>
-                <option value="">Select Item</option>
-            </select>
+            <select class="item-name" required><option value="">Select Item</option></select>
             <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" required readonly>
             <input type="number" placeholder="Quantity" class="item-quantity" step="0.1" min="0.1" required>
             <span class="stock-available">Stock: 0</span>
@@ -276,432 +235,244 @@ function clearForm() {
             <button type="button" class="remove-item" onclick="removeItem(this)">×</button>
         </div>
     `;
-    
     populateProductDropdown(container.querySelector('.item-name'));
     document.getElementById('daily-total').textContent = '0.00';
 }
 
-// Load and display sales history
+// Sales History
 function loadSalesHistory() {
     const salesData = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
     displaySalesRecords(salesData);
 }
 
-// Display sales records
 function displaySalesRecords(records) {
     const salesList = document.getElementById('sales-list');
     const totalRecords = document.getElementById('total-records');
     const totalAmount = document.getElementById('total-amount');
-    
+
     if (records.length === 0) {
         salesList.innerHTML = '<div class="no-records">No sales records found.</div>';
         totalRecords.textContent = '0';
         totalAmount.textContent = '0.00';
+        document.getElementById('total-profit').textContent = '0.00';
         return;
     }
-    
-    // Calculate totals
-    const recordCount = records.length;
-    const amountTotal = records.reduce((sum, record) => sum + record.dailyTotal, 0);
-    
-    totalRecords.textContent = recordCount;
-    totalAmount.textContent = amountTotal.toFixed(2);
-    
-    // Generate HTML for records
-    salesList.innerHTML = records.map(record => `
-        <div class="sales-record">
-            <h4>Date: ${formatDate(record.date)}</h4>
-            <div class="record-total">Total: $${record.dailyTotal.toFixed(2)}</div>
-            <div class="items-list">
-                ${record.items.map(item => `
-                    <div class="item-detail">
-                        <span>${item.name} - Customer: ${item.customerName}</span>
-                        <span>${item.quantity} ${item.unit || (item.category === 'raw' ? 'KG' : 'Pieces')} × $${item.price.toFixed(2)} = $${item.total.toFixed(2)} ${item.duePayment > 0 ? `(Due: $${item.duePayment.toFixed(2)})` : ''}</span>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `).join('');
+
+    totalRecords.textContent = records.length;
+    totalAmount.textContent = records.reduce(function(sum, r) { return sum + r.dailyTotal; }, 0).toFixed(2);
+
+    var totalProfit = records.reduce(function(sum, r) {
+        return sum + r.items.reduce(function(s, i) {
+            var p = (i.profit !== undefined) ? i.profit : (i.price - (i.buyingPrice || 0)) * i.quantity;
+            return s + p;
+        }, 0);
+    }, 0);
+    document.getElementById('total-profit').textContent = totalProfit.toFixed(2);
+
+    salesList.innerHTML = records.map(function(record) {
+        var recordProfit = record.items.reduce(function(s, i) {
+            return s + ((i.profit !== undefined) ? i.profit : (i.price - (i.buyingPrice || 0)) * i.quantity);
+        }, 0);
+
+        var itemsHtml = record.items.map(function(item) {
+            var unit = item.unit || (item.category === 'raw' ? 'KG' : 'Pieces');
+            var itemProfit = (item.profit !== undefined) ? item.profit : (item.price - (item.buyingPrice || 0)) * item.quantity;
+            var dueHtml = item.duePayment > 0 ? '<span class="item-due">(Due: $' + item.duePayment.toFixed(2) + ')</span>' : '';
+            return '<div class="item-detail">' +
+                '<span>' + item.name + ' \u2014 ' + item.customerName + '</span>' +
+                '<span>' + item.quantity + ' ' + unit + ' \u00d7 $' + item.price.toFixed(2) +
+                ' = $' + item.total.toFixed(2) +
+                ' <span class="item-profit">+$' + itemProfit.toFixed(2) + ' profit</span>' +
+                dueHtml + '</span>' +
+                '</div>';
+        }).join('');
+
+        var cost = record.dailyTotal - recordProfit;
+        return '<div class="sales-record">' +
+            '<div class="record-header">' +
+                '<h4>Date: ' + formatDate(record.date) + '</h4>' +
+                '<span class="daily-profit-badge">Daily Profit: $' + recordProfit.toFixed(2) + '</span>' +
+            '</div>' +
+            '<div class="record-totals">' +
+                '<span class="record-total">Revenue: $' + record.dailyTotal.toFixed(2) + '</span>' +
+                '<span class="record-cost">Cost: $' + cost.toFixed(2) + '</span>' +
+                '<span class="record-profit">Net Profit: $' + recordProfit.toFixed(2) + '</span>' +
+            '</div>' +
+            '<div class="items-list">' + itemsHtml + '</div>' +
+            '</div>';
+    }).join('');
 }
 
-// Search sales by date
 function searchSales() {
     const searchDate = document.getElementById('search-date').value;
     const searchMonth = document.getElementById('search-month').value;
-    const salesData = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
-    
-    let filteredData = salesData;
-    
-    if (searchDate) {
-        filteredData = salesData.filter(record => record.date === searchDate);
-    } else if (searchMonth) {
-        filteredData = salesData.filter(record => record.date.startsWith(searchMonth));
-    }
-    
-    displaySalesRecords(filteredData);
+    let data = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
+    if (searchDate) data = data.filter(r => r.date === searchDate);
+    else if (searchMonth) data = data.filter(r => r.date.startsWith(searchMonth));
+    displaySalesRecords(data);
 }
 
-// Show all sales
 function showAllSales() {
     document.getElementById('search-date').value = '';
     document.getElementById('search-month').value = '';
     loadSalesHistory();
 }
 
-// Format date for display
 function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// Export to Excel
+// Export Sales to Excel
 function exportToExcel() {
     const searchDate = document.getElementById('search-date').value;
     const searchMonth = document.getElementById('search-month').value;
-    const salesData = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
-    
-    let dataToExport = salesData;
-    
-    // Apply filters if any
-    if (searchDate) {
-        dataToExport = salesData.filter(record => record.date === searchDate);
-    } else if (searchMonth) {
-        dataToExport = salesData.filter(record => record.date.startsWith(searchMonth));
-    }
-    
-    if (dataToExport.length === 0) {
-        alert('No data to export.');
-        return;
-    }
-    
-    // Sort by date (oldest first for better readability)
-    dataToExport.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
-    // Create workbook
+    let data = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
+    if (searchDate) data = data.filter(r => r.date === searchDate);
+    else if (searchMonth) data = data.filter(r => r.date.startsWith(searchMonth));
+    if (data.length === 0) { alert('No data to export.'); return; }
+    data.sort((a, b) => new Date(a.date) - new Date(b.date));
     const wb = XLSX.utils.book_new();
-    
-    // Create main sales sheet
-    createSalesSheet(wb, dataToExport);
-    
-    // Create summary sheet
-    createSummarySheet(wb, dataToExport);
-    
-    // Generate filename
+    createSalesSheet(wb, data);
+    createSummarySheet(wb, data);
     let filename = 'Tarek_Enterprise_Sales_Report';
-    if (searchDate) {
-        filename += `_${searchDate}`;
-    } else if (searchMonth) {
-        filename += `_${searchMonth.replace('-', '_')}`;
-    } else {
-        filename += `_All_Records`;
-    }
+    if (searchDate) filename += `_${searchDate}`;
+    else if (searchMonth) filename += `_${searchMonth.replace('-', '_')}`;
+    else filename += '_All_Records';
     filename += `_${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    // Save file
     XLSX.writeFile(wb, filename);
 }
 
-// Create detailed sales sheet
 function createSalesSheet(wb, dataToExport) {
-    const salesData = [];
-    
-    // Add main header
-    salesData.push(['TAREK ENTERPRISE - SALES REPORT']);
-    salesData.push(['Generated on: ' + new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })]);
-    salesData.push([]); // Empty row
-    
-    // Add column headers
-    salesData.push([
-        'Date',
-        'Item Name',
-        'Category',
-        'Customer Name',
-        'Price per Unit',
-        'Quantity',
-        'Unit',
-        'Item Total',
-        'Due Payment',
-        'Daily Total'
-    ]);
-    
-    let grandTotal = 0;
-    let totalDue = 0;
-    
-    // Process each date
-    dataToExport.forEach((record, recordIndex) => {
-        const formattedDate = formatDate(record.date);
-        
-        // Add date separator
-        if (recordIndex > 0) {
-            salesData.push([]); // Empty row between dates
-        }
-        
-        // Add items for this date
-        record.items.forEach((item, itemIndex) => {
+    const rows = [
+        ['TAREK ENTERPRISE - SALES REPORT'],
+        ['Generated on: ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })],
+        [],
+        ['Date', 'Item Name', 'Category', 'Customer Name', 'Price per Unit', 'Quantity', 'Unit', 'Item Total', 'Due Payment', 'Daily Total']
+    ];
+    let grandTotal = 0, totalDue = 0;
+    dataToExport.forEach((record, ri) => {
+        if (ri > 0) rows.push([]);
+        record.items.forEach((item, ii) => {
             const unit = item.unit || (item.category === 'raw' ? 'KG' : 'Pieces');
-            const categoryName = item.category === 'raw' ? 'Raw Materials' : 'Furniture Materials';
-            
-            salesData.push([
-                itemIndex === 0 ? formattedDate : '', // Show date only on first item
+            rows.push([
+                ii === 0 ? formatDate(record.date) : '',
                 item.name,
-                categoryName,
+                item.category === 'raw' ? 'Raw Materials' : 'Furniture Materials',
                 item.customerName || 'N/A',
-                `$${item.price.toFixed(2)}`,
-                item.quantity,
-                unit,
+                `$${item.price.toFixed(2)}`, item.quantity, unit,
                 `$${item.total.toFixed(2)}`,
                 item.duePayment > 0 ? `$${item.duePayment.toFixed(2)}` : '$0.00',
-                itemIndex === 0 ? `$${record.dailyTotal.toFixed(2)}` : '' // Show daily total only on first item
+                ii === 0 ? `$${record.dailyTotal.toFixed(2)}` : ''
             ]);
-            
-            if (itemIndex === 0) {
-                grandTotal += record.dailyTotal;
-            }
+            if (ii === 0) grandTotal += record.dailyTotal;
             totalDue += (item.duePayment || 0);
         });
     });
-    
-    // Add summary totals
-    salesData.push([]); // Empty row
-    salesData.push(['SUMMARY']);
-    salesData.push(['Total Records:', dataToExport.length]);
-    salesData.push(['Total Sales Amount:', `$${grandTotal.toFixed(2)}`]);
-    salesData.push(['Total Due Payments:', `$${totalDue.toFixed(2)}`]);
-    salesData.push(['Net Amount Received:', `$${(grandTotal - totalDue).toFixed(2)}`]);
-    
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(salesData);
-    
-    // Set column widths
-    ws['!cols'] = [
-        { width: 15 }, // Date
-        { width: 20 }, // Item Name
-        { width: 18 }, // Category
-        { width: 20 }, // Customer Name
-        { width: 15 }, // Price per Unit
-        { width: 12 }, // Quantity
-        { width: 10 }, // Unit
-        { width: 15 }, // Item Total
-        { width: 15 }, // Due Payment
-        { width: 15 }  // Daily Total
-    ];
-    
-    // Add worksheet to workbook
+    rows.push([], ['SUMMARY'], ['Total Records:', dataToExport.length],
+        ['Total Sales Amount:', `$${grandTotal.toFixed(2)}`],
+        ['Total Due Payments:', `$${totalDue.toFixed(2)}`],
+        ['Net Amount Received:', `$${(grandTotal - totalDue).toFixed(2)}`]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [15,20,18,20,15,12,10,15,15,15].map(w => ({ width: w }));
     XLSX.utils.book_append_sheet(wb, ws, 'Sales Details');
 }
 
-// Create summary sheet
 function createSummarySheet(wb, dataToExport) {
-    const summaryData = [];
-    
-    // Add header
-    summaryData.push(['TAREK ENTERPRISE - DAILY SUMMARY']);
-    summaryData.push(['Generated on: ' + new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    })]);
-    summaryData.push([]); // Empty row
-    
-    // Add column headers
-    summaryData.push([
-        'Date',
-        'Total Items Sold',
-        'Raw Materials (KG)',
-        'Furniture (Pieces)',
-        'Daily Sales',
-        'Due Payments',
-        'Net Received'
-    ]);
-    
-    let totalSales = 0;
-    let totalDue = 0;
-    let totalRawMaterials = 0;
-    let totalFurniture = 0;
-    
-    // Process each date
+    const rows = [
+        ['TAREK ENTERPRISE - DAILY SUMMARY'],
+        ['Generated on: ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })],
+        [],
+        ['Date', 'Total Items Sold', 'Raw Materials (KG)', 'Furniture (Pieces)', 'Daily Sales', 'Due Payments', 'Net Received']
+    ];
+    let totalSales = 0, totalDue = 0, totalRaw = 0, totalFurniture = 0;
     dataToExport.forEach(record => {
-        const formattedDate = formatDate(record.date);
-        const itemCount = record.items.length;
-        
-        // Calculate category totals
-        let rawMaterialsQty = 0;
-        let furnitureQty = 0;
-        let dailyDue = 0;
-        
+        let rawQty = 0, furQty = 0, dailyDue = 0;
         record.items.forEach(item => {
-            if (item.category === 'raw') {
-                rawMaterialsQty += item.quantity;
-            } else {
-                furnitureQty += item.quantity;
-            }
+            if (item.category === 'raw') rawQty += item.quantity;
+            else furQty += item.quantity;
             dailyDue += (item.duePayment || 0);
         });
-        
-        summaryData.push([
-            formattedDate,
-            itemCount,
-            rawMaterialsQty > 0 ? `${rawMaterialsQty} KG` : '0 KG',
-            furnitureQty > 0 ? `${furnitureQty} Pieces` : '0 Pieces',
-            `$${record.dailyTotal.toFixed(2)}`,
-            `$${dailyDue.toFixed(2)}`,
-            `$${(record.dailyTotal - dailyDue).toFixed(2)}`
-        ]);
-        
-        totalSales += record.dailyTotal;
-        totalDue += dailyDue;
-        totalRawMaterials += rawMaterialsQty;
-        totalFurniture += furnitureQty;
+        rows.push([formatDate(record.date), record.items.length, `${rawQty} KG`, `${furQty} Pieces`,
+            `$${record.dailyTotal.toFixed(2)}`, `$${dailyDue.toFixed(2)}`, `$${(record.dailyTotal - dailyDue).toFixed(2)}`]);
+        totalSales += record.dailyTotal; totalDue += dailyDue; totalRaw += rawQty; totalFurniture += furQty;
     });
-    
-    // Add totals
-    summaryData.push([]); // Empty row
-    summaryData.push([
-        'TOTALS',
-        dataToExport.reduce((sum, record) => sum + record.items.length, 0),
-        `${totalRawMaterials} KG`,
-        `${totalFurniture} Pieces`,
-        `$${totalSales.toFixed(2)}`,
-        `$${totalDue.toFixed(2)}`,
-        `$${(totalSales - totalDue).toFixed(2)}`
-    ]);
-    
+    rows.push([], ['TOTALS', dataToExport.reduce((s, r) => s + r.items.length, 0),
+        `${totalRaw} KG`, `${totalFurniture} Pieces`, `$${totalSales.toFixed(2)}`, `$${totalDue.toFixed(2)}`, `$${(totalSales - totalDue).toFixed(2)}`]);
+
     // Customer analysis
-    summaryData.push([]); // Empty row
-    summaryData.push(['CUSTOMER ANALYSIS']);
-    summaryData.push(['Customer Name', 'Total Purchases', 'Total Due']);
-    
-    // Group by customer
+    rows.push([], ['CUSTOMER ANALYSIS'], ['Customer Name', 'Total Purchases', 'Total Due']);
     const customerData = {};
     dataToExport.forEach(record => {
         record.items.forEach(item => {
-            const customer = item.customerName || 'Unknown';
-            if (!customerData[customer]) {
-                customerData[customer] = { total: 0, due: 0 };
-            }
-            customerData[customer].total += item.total;
-            customerData[customer].due += (item.duePayment || 0);
+            const c = item.customerName || 'Unknown';
+            if (!customerData[c]) customerData[c] = { total: 0, due: 0 };
+            customerData[c].total += item.total;
+            customerData[c].due += (item.duePayment || 0);
         });
     });
-    
-    // Add customer data
-    Object.entries(customerData)
-        .sort(([,a], [,b]) => b.total - a.total) // Sort by total purchases
-        .forEach(([customer, data]) => {
-            summaryData.push([
-                customer,
-                `$${data.total.toFixed(2)}`,
-                `$${data.due.toFixed(2)}`
-            ]);
-        });
-    
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(summaryData);
-    
-    // Set column widths
-    ws['!cols'] = [
-        { width: 15 }, // Date/Customer
-        { width: 15 }, // Total Items/Purchases
-        { width: 18 }, // Raw Materials
-        { width: 18 }, // Furniture
-        { width: 15 }, // Daily Sales
-        { width: 15 }, // Due Payments
-        { width: 15 }  // Net Received
-    ];
-    
-    // Add worksheet to workbook
+    Object.entries(customerData).sort(([,a],[,b]) => b.total - a.total)
+        .forEach(([c, d]) => rows.push([c, `$${d.total.toFixed(2)}`, `$${d.due.toFixed(2)}`]));
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [15,15,18,18,15,15,15].map(w => ({ width: w }));
     XLSX.utils.book_append_sheet(wb, ws, 'Summary & Analysis');
 }
 
-// Stock Management Functions
-
-// Add new stock
+// Stock Management
 function addStock(event, category) {
     event.preventDefault();
-    
     const prefix = category === 'raw' ? 'raw' : 'furniture';
     const productName = document.getElementById(`${prefix}-product-name`).value.trim();
     const buyingPrice = parseFloat(document.getElementById(`${prefix}-buying-price`).value);
     const sellingPrice = parseFloat(document.getElementById(`${prefix}-selling-price`).value);
     const quantity = parseFloat(document.getElementById(`${prefix}-stock-quantity`).value);
-    
+
     if (!productName || buyingPrice <= 0 || sellingPrice <= 0 || quantity <= 0) {
         alert('Please fill in all required fields with valid values.');
         return;
     }
-    
     if (sellingPrice <= buyingPrice) {
-        if (!confirm('Selling price is not higher than buying price. Continue anyway?')) {
-            return;
-        }
+        if (!confirm('Selling price is not higher than buying price. Continue anyway?')) return;
     }
-    
-    // Get existing stock data for this category
+
     const storageKey = `tarekStockData_${category}`;
     let stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    // Check if product already exists
     const existingIndex = stockData.findIndex(item => item.name.toLowerCase() === productName.toLowerCase());
-    
+
     if (existingIndex !== -1) {
-        if (confirm(`Product "${productName}" already exists. Do you want to add to existing stock?`)) {
+        if (confirm(`"${productName}" already exists. Add to existing stock?`)) {
             stockData[existingIndex].quantity += quantity;
-            stockData[existingIndex].buyingPrice = buyingPrice; // Update prices
+            stockData[existingIndex].buyingPrice = buyingPrice;
             stockData[existingIndex].sellingPrice = sellingPrice;
             stockData[existingIndex].updatedAt = new Date().toISOString();
-        } else {
-            return;
-        }
+        } else return;
     } else {
-        // Add new product
-        const newStock = {
-            id: Date.now().toString(),
-            name: productName,
-            buyingPrice: buyingPrice,
-            sellingPrice: sellingPrice,
-            quantity: quantity,
-            category: category,
-            unit: category === 'raw' ? 'KG' : 'Pieces',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        stockData.push(newStock);
+        stockData.push({
+            id: Date.now().toString(), name: productName, buyingPrice, sellingPrice, quantity,
+            category, unit: category === 'raw' ? 'KG' : 'Pieces',
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        });
     }
-    
-    // Save to localStorage
+
     localStorage.setItem(storageKey, JSON.stringify(stockData));
-    
     alert('Stock added successfully!');
     document.getElementById(`${prefix}-stock-form`).reset();
     loadStockList(category);
     populateProductDropdowns();
 }
 
-// Load and display stock list
 function loadStockList(category) {
-    const storageKey = `tarekStockData_${category}`;
-    const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+    const stockData = JSON.parse(localStorage.getItem(`tarekStockData_${category}`)) || [];
     displayStockItems(stockData, category);
 }
 
-// Display stock items
 function displayStockItems(items, category) {
     const prefix = category === 'raw' ? 'raw' : 'furniture';
     const stockList = document.getElementById(`${prefix}-stock-list`);
     const totalProducts = document.getElementById(`${prefix}-total-products`);
     const totalStockValue = document.getElementById(`${prefix}-total-stock-value`);
     const lowStockCount = document.getElementById(`${prefix}-low-stock-count`);
-    
+
     if (items.length === 0) {
         stockList.innerHTML = '<div class="no-stock">No stock items found.</div>';
         totalProducts.textContent = '0';
@@ -709,44 +480,25 @@ function displayStockItems(items, category) {
         lowStockCount.textContent = '0';
         return;
     }
-    
-    // Calculate summary
-    const productCount = items.length;
-    const stockValue = items.reduce((sum, item) => sum + (item.buyingPrice * item.quantity), 0);
-    const lowStock = items.filter(item => item.quantity <= 5).length;
-    
-    totalProducts.textContent = productCount;
-    totalStockValue.textContent = stockValue.toFixed(2);
-    lowStockCount.textContent = lowStock;
-    
-    // Generate HTML for stock items
+
+    totalProducts.textContent = items.length;
+    totalStockValue.textContent = items.reduce((s, i) => s + (i.buyingPrice * i.quantity), 0).toFixed(2);
+    lowStockCount.textContent = items.filter(i => i.quantity <= 5).length;
+
     stockList.innerHTML = items.map(item => {
         const stockClass = item.quantity === 0 ? 'out-of-stock' : item.quantity <= 5 ? 'low-stock' : '';
-        const quantityClass = item.quantity === 0 ? 'out-of-stock' : item.quantity <= 5 ? 'low-stock' : '';
-        
+        const unit = item.unit || (item.category === 'raw' ? 'KG' : 'Pieces');
         return `
             <div class="stock-item ${stockClass}">
                 <div class="stock-header">
                     <span class="stock-name">${item.name}</span>
-                    <span class="stock-quantity ${quantityClass}">Stock: ${item.quantity} ${item.unit || (item.category === 'raw' ? 'KG' : 'Pieces')}</span>
+                    <span class="stock-quantity ${stockClass}">Stock: ${item.quantity} ${unit}</span>
                 </div>
                 <div class="stock-details">
-                    <div class="stock-detail-item">
-                        <span>Buying Price:</span>
-                        <span>$${item.buyingPrice.toFixed(2)}</span>
-                    </div>
-                    <div class="stock-detail-item">
-                        <span>Selling Price:</span>
-                        <span>$${item.sellingPrice.toFixed(2)}</span>
-                    </div>
-                    <div class="stock-detail-item">
-                        <span>Profit per unit:</span>
-                        <span>$${(item.sellingPrice - item.buyingPrice).toFixed(2)}</span>
-                    </div>
-                    <div class="stock-detail-item">
-                        <span>Total Value:</span>
-                        <span>$${(item.buyingPrice * item.quantity).toFixed(2)}</span>
-                    </div>
+                    <div class="stock-detail-item"><span>Buying Price:</span><span>$${item.buyingPrice.toFixed(2)}</span></div>
+                    <div class="stock-detail-item"><span>Selling Price:</span><span>$${item.sellingPrice.toFixed(2)}</span></div>
+                    <div class="stock-detail-item"><span>Profit per unit:</span><span>$${(item.sellingPrice - item.buyingPrice).toFixed(2)}</span></div>
+                    <div class="stock-detail-item"><span>Total Value:</span><span>$${(item.buyingPrice * item.quantity).toFixed(2)}</span></div>
                 </div>
                 <div class="stock-actions">
                     <button class="edit-stock" onclick="editStock('${item.id}', '${category}')">Edit</button>
@@ -757,293 +509,128 @@ function displayStockItems(items, category) {
     }).join('');
 }
 
-// Search stock
 function searchStock(category) {
     const prefix = category === 'raw' ? 'raw' : 'furniture';
-    const searchTerm = document.getElementById(`${prefix}-stock-search`).value.toLowerCase();
-    const storageKey = `tarekStockData_${category}`;
-    const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    const filteredData = stockData.filter(item => 
-        item.name.toLowerCase().includes(searchTerm)
-    );
-    
-    displayStockItems(filteredData, category);
+    const term = document.getElementById(`${prefix}-stock-search`).value.toLowerCase();
+    const stockData = JSON.parse(localStorage.getItem(`tarekStockData_${category}`)) || [];
+    displayStockItems(stockData.filter(i => i.name.toLowerCase().includes(term)), category);
 }
 
-// Show all stock
 function showAllStock(category) {
     const prefix = category === 'raw' ? 'raw' : 'furniture';
     document.getElementById(`${prefix}-stock-search`).value = '';
     loadStockList(category);
 }
 
-// Edit stock item
 function editStock(itemId, category) {
     const storageKey = `tarekStockData_${category}`;
     const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
-    const item = stockData.find(stock => stock.id === itemId);
-    
+    const item = stockData.find(s => s.id === itemId);
     if (!item) return;
-    
-    const unit = item.unit || (item.category === 'raw' ? 'KG' : 'Pieces');
-    const quantityLabel = category === 'raw' ? 'weight' : 'quantity';
-    
-    const newQuantity = prompt(`Edit ${quantityLabel} for "${item.name}" (${unit}):`, item.quantity);
+
+    const unit = item.unit || (category === 'raw' ? 'KG' : 'Pieces');
+    const newQuantity = prompt(`Edit quantity for "${item.name}" (${unit}):`, item.quantity);
     const newBuyingPrice = prompt(`Edit buying price for "${item.name}":`, item.buyingPrice);
     const newSellingPrice = prompt(`Edit selling price for "${item.name}":`, item.sellingPrice);
-    
+
     if (newQuantity !== null && newBuyingPrice !== null && newSellingPrice !== null) {
         const quantity = parseFloat(newQuantity);
         const buyingPrice = parseFloat(newBuyingPrice);
         const sellingPrice = parseFloat(newSellingPrice);
-        
         if (quantity >= 0 && buyingPrice > 0 && sellingPrice > 0) {
             item.quantity = quantity;
             item.buyingPrice = buyingPrice;
             item.sellingPrice = sellingPrice;
             item.updatedAt = new Date().toISOString();
-            
             localStorage.setItem(storageKey, JSON.stringify(stockData));
             loadStockList(category);
             populateProductDropdowns();
         } else {
-            alert('Please enter valid values.');
+            alert('Invalid values entered.');
         }
     }
 }
 
-// Delete stock item
 function deleteStock(itemId, category) {
-    if (confirm('Are you sure you want to delete this stock item?')) {
-        const storageKey = `tarekStockData_${category}`;
-        let stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
-        stockData = stockData.filter(item => item.id !== itemId);
-        
-        localStorage.setItem(storageKey, JSON.stringify(stockData));
-        loadStockList(category);
-        populateProductDropdowns();
-    }
+    if (!confirm('Are you sure you want to delete this stock item?')) return;
+    const storageKey = `tarekStockData_${category}`;
+    let stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
+    stockData = stockData.filter(i => i.id !== itemId);
+    localStorage.setItem(storageKey, JSON.stringify(stockData));
+    loadStockList(category);
+    populateProductDropdowns();
 }
 
-// Populate product dropdowns in sales form
-function populateProductDropdowns() {
-    const dropdowns = document.querySelectorAll('.item-name');
-    dropdowns.forEach(dropdown => {
-        populateProductDropdown(dropdown);
-    });
-}
-
-function populateProductDropdown(dropdown) {
-    // Get stock from both categories
-    const rawStockData = JSON.parse(localStorage.getItem('tarekStockData_raw')) || [];
-    const furnitureStockData = JSON.parse(localStorage.getItem('tarekStockData_furniture')) || [];
-    const allStock = [...rawStockData, ...furnitureStockData];
-    const availableStock = allStock.filter(item => item.quantity > 0);
-    
-    dropdown.innerHTML = '<option value="">Select Item</option>';
-    
-    availableStock.forEach(item => {
-        const option = document.createElement('option');
-        option.value = `${item.name}|${item.category}`;
-        option.textContent = `${item.name} (${item.category === 'raw' ? 'Raw' : 'Furniture'}) - Stock: ${item.quantity} ${item.unit || (item.category === 'raw' ? 'KG' : 'Pieces')}`;
-        dropdown.appendChild(option);
-    });
-}
-
-// Update product details when selected
-function updateProductDetails(dropdown) {
-    const itemRow = dropdown.closest('.item-row');
-    const priceInput = itemRow.querySelector('.item-price');
-    const stockSpan = itemRow.querySelector('.stock-available');
-    const quantityInput = itemRow.querySelector('.item-quantity');
-    
-    if (dropdown.value) {
-        const [productName, category] = dropdown.value.split('|');
-        const storageKey = `tarekStockData_${category}`;
-        const stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
-        const selectedItem = stockData.find(item => item.name === productName);
-        
-        if (selectedItem) {
-            priceInput.value = selectedItem.sellingPrice.toFixed(2);
-            const unit = selectedItem.unit || (selectedItem.category === 'raw' ? 'KG' : 'Pieces');
-            stockSpan.textContent = `Stock: ${selectedItem.quantity} ${unit}`;
-            quantityInput.max = selectedItem.quantity;
-            
-            // Update placeholder and step based on category
-            if (selectedItem.category === 'raw') {
-                quantityInput.placeholder = 'Weight (KG)';
-                quantityInput.step = '0.1';
-                quantityInput.min = '0.1';
-            } else {
-                quantityInput.placeholder = 'Quantity (Pieces)';
-                quantityInput.step = '1';
-                quantityInput.min = '1';
-            }
-            
-            if (selectedItem.quantity <= 5) {
-                stockSpan.classList.add('low-stock');
-            } else {
-                stockSpan.classList.remove('low-stock');
-            }
-        }
-    } else {
-        priceInput.value = '';
-        stockSpan.textContent = 'Stock: 0';
-        quantityInput.max = '';
-        quantityInput.placeholder = 'Quantity';
-        quantityInput.step = '0.1';
-        quantityInput.min = '0.1';
-        stockSpan.classList.remove('low-stock');
-    }
-    
-    calculateItemTotal(itemRow);
-    calculateDailyTotal();
-}
-
-// Update stock after sale
-function updateStockAfterSale(soldItems) {
-    soldItems.forEach(soldItem => {
-        const storageKey = `tarekStockData_${soldItem.category}`;
-        let stockData = JSON.parse(localStorage.getItem(storageKey)) || [];
-        
-        const stockItem = stockData.find(item => item.name === soldItem.name);
-        if (stockItem) {
-            stockItem.quantity -= soldItem.quantity;
-            stockItem.updatedAt = new Date().toISOString();
-        }
-        
-        localStorage.setItem(storageKey, JSON.stringify(stockData));
-    });
-}
-// Daily Expenses Management Functions
-
-// Add new expense
+// Expenses
 function addExpense(event) {
     event.preventDefault();
-    
     const date = document.getElementById('expense-date').value;
     const name = document.getElementById('expense-name').value.trim();
     const description = document.getElementById('expense-description').value.trim();
     const amount = parseFloat(document.getElementById('expense-amount').value);
-    
-    if (!date || !name || amount <= 0) {
-        alert('Please fill in all required fields with valid values.');
-        return;
-    }
-    
-    // Create expense record
-    const expenseRecord = {
-        id: Date.now().toString(),
-        date: date,
-        name: name,
-        description: description,
-        amount: amount,
-        createdAt: new Date().toISOString()
-    };
-    
-    // Save to localStorage
-    let expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
-    expenseData.push(expenseRecord);
-    
-    // Sort by date (newest first)
-    expenseData.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    localStorage.setItem('tarekExpenseData', JSON.stringify(expenseData));
-    
+
+    if (!date || !name || amount <= 0) { alert('Please fill in all required fields.'); return; }
+
+    let expenses = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    expenses.push({ id: Date.now().toString(), date, name, description, amount, createdAt: new Date().toISOString() });
+    expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+    localStorage.setItem('tarekExpenseData', JSON.stringify(expenses));
     alert('Expense added successfully!');
     clearExpenseForm();
     loadExpenseHistory();
-    updateExpenseSummary();
 }
 
-// Clear expense form
 function clearExpenseForm() {
     document.getElementById('expense-form').reset();
     document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
 }
 
-// Load and display expense history
 function loadExpenseHistory() {
-    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
-    displayExpenseRecords(expenseData);
-    updateExpenseSummary();
+    const expenses = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    displayExpenses(expenses);
 }
 
-// Display expense records
-function displayExpenseRecords(records) {
-    const expenseList = document.getElementById('expense-list');
-    
-    if (records.length === 0) {
-        expenseList.innerHTML = '<div class="no-expenses">No expense records found.</div>';
-        return;
-    }
-    
-    // Generate HTML for records
-    expenseList.innerHTML = records.map(record => `
+function displayExpenses(expenses) {
+    const list = document.getElementById('expense-list');
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.substring(0, 7);
+
+    const todayTotal = expenses.filter(e => e.date === today).reduce((s, e) => s + e.amount, 0);
+    const monthTotal = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s, e) => s + e.amount, 0);
+
+    document.getElementById('today-expenses').textContent = `$${todayTotal.toFixed(2)}`;
+    document.getElementById('month-expenses').textContent = `$${monthTotal.toFixed(2)}`;
+    document.getElementById('total-expense-records').textContent = expenses.length;
+
+    if (expenses.length === 0) { list.innerHTML = '<div class="no-expenses">No expense records found.</div>'; return; }
+
+    list.innerHTML = expenses.map(e => `
         <div class="expense-record">
             <div class="expense-header">
-                <span class="expense-name">${record.name}</span>
-                <span class="expense-amount">$${record.amount.toFixed(2)}</span>
+                <span class="expense-name">${e.name}</span>
+                <span class="expense-amount">$${e.amount.toFixed(2)}</span>
             </div>
-            ${record.description ? `<div class="expense-details">${record.description}</div>` : ''}
-            <div class="expense-date">Date: ${formatDate(record.date)}</div>
+            ${e.description ? `<div class="expense-details">${e.description}</div>` : ''}
+            <div class="expense-date">${formatDate(e.date)}</div>
             <div class="expense-actions">
-                <button class="edit-expense" onclick="editExpense('${record.id}')">Edit</button>
-                <button class="delete-expense" onclick="deleteExpense('${record.id}')">Delete</button>
+                <button class="edit-expense" onclick="editExpense('${e.id}')">Edit</button>
+                <button class="delete-expense" onclick="deleteExpense('${e.id}')">Delete</button>
             </div>
         </div>
     `).join('');
 }
 
-// Update expense summary
-function updateExpenseSummary() {
-    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
-    const today = new Date().toISOString().split('T')[0];
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    
-    // Calculate today's expenses
-    const todayExpenses = expenseData
-        .filter(record => record.date === today)
-        .reduce((sum, record) => sum + record.amount, 0);
-    
-    // Calculate this month's expenses
-    const monthExpenses = expenseData
-        .filter(record => record.date.startsWith(currentMonth))
-        .reduce((sum, record) => sum + record.amount, 0);
-    
-    // Update display
-    document.getElementById('today-expenses').textContent = `$${todayExpenses.toFixed(2)}`;
-    document.getElementById('month-expenses').textContent = `$${monthExpenses.toFixed(2)}`;
-    document.getElementById('total-expense-records').textContent = expenseData.length;
-}
-
-// Search expenses
 function searchExpenses() {
-    const searchDate = document.getElementById('expense-search-date').value;
-    const searchMonth = document.getElementById('expense-search-month').value;
-    const searchName = document.getElementById('expense-search-name').value.toLowerCase();
-    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
-    
-    let filteredData = expenseData;
-    
-    if (searchDate) {
-        filteredData = filteredData.filter(record => record.date === searchDate);
-    } else if (searchMonth) {
-        filteredData = filteredData.filter(record => record.date.startsWith(searchMonth));
-    }
-    
-    if (searchName) {
-        filteredData = filteredData.filter(record => 
-            record.name.toLowerCase().includes(searchName) ||
-            (record.description && record.description.toLowerCase().includes(searchName))
-        );
-    }
-    
-    displayExpenseRecords(filteredData);
+    const date = document.getElementById('expense-search-date').value;
+    const month = document.getElementById('expense-search-month').value;
+    const name = document.getElementById('expense-search-name').value.toLowerCase();
+    let expenses = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    if (date) expenses = expenses.filter(e => e.date === date);
+    else if (month) expenses = expenses.filter(e => e.date.startsWith(month));
+    if (name) expenses = expenses.filter(e => e.name.toLowerCase().includes(name));
+    displayExpenses(expenses);
 }
 
-// Show all expenses
 function showAllExpenses() {
     document.getElementById('expense-search-date').value = '';
     document.getElementById('expense-search-month').value = '';
@@ -1051,143 +638,64 @@ function showAllExpenses() {
     loadExpenseHistory();
 }
 
-// Edit expense
-function editExpense(expenseId) {
-    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
-    const expense = expenseData.find(record => record.id === expenseId);
-    
+function editExpense(id) {
+    let expenses = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    const expense = expenses.find(e => e.id === id);
     if (!expense) return;
-    
-    const newName = prompt(`Edit expense name:`, expense.name);
-    const newDescription = prompt(`Edit description:`, expense.description || '');
-    const newAmount = prompt(`Edit amount:`, expense.amount);
-    
+    const newName = prompt('Edit expense name:', expense.name);
+    const newAmount = prompt('Edit amount:', expense.amount);
+    const newDesc = prompt('Edit description:', expense.description);
     if (newName !== null && newAmount !== null) {
         const amount = parseFloat(newAmount);
-        
         if (newName.trim() && amount > 0) {
             expense.name = newName.trim();
-            expense.description = newDescription ? newDescription.trim() : '';
             expense.amount = amount;
-            expense.updatedAt = new Date().toISOString();
-            
-            localStorage.setItem('tarekExpenseData', JSON.stringify(expenseData));
+            expense.description = newDesc || '';
+            localStorage.setItem('tarekExpenseData', JSON.stringify(expenses));
             loadExpenseHistory();
         } else {
-            alert('Please enter valid values.');
+            alert('Invalid values entered.');
         }
     }
 }
 
-// Delete expense
-function deleteExpense(expenseId) {
-    if (confirm('Are you sure you want to delete this expense record?')) {
-        let expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
-        expenseData = expenseData.filter(record => record.id !== expenseId);
-        
-        localStorage.setItem('tarekExpenseData', JSON.stringify(expenseData));
-        loadExpenseHistory();
-    }
+function deleteExpense(id) {
+    if (!confirm('Delete this expense record?')) return;
+    let expenses = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    expenses = expenses.filter(e => e.id !== id);
+    localStorage.setItem('tarekExpenseData', JSON.stringify(expenses));
+    loadExpenseHistory();
 }
 
-// Export expenses to Excel
 function exportExpensesToExcel() {
-    const searchDate = document.getElementById('expense-search-date').value;
-    const searchMonth = document.getElementById('expense-search-month').value;
-    const searchName = document.getElementById('expense-search-name').value.toLowerCase();
-    const expenseData = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
-    
-    let dataToExport = expenseData;
-    
-    // Apply filters
-    if (searchDate) {
-        dataToExport = dataToExport.filter(record => record.date === searchDate);
-    } else if (searchMonth) {
-        dataToExport = dataToExport.filter(record => record.date.startsWith(searchMonth));
-    }
-    
-    if (searchName) {
-        dataToExport = dataToExport.filter(record => 
-            record.name.toLowerCase().includes(searchName) ||
-            (record.description && record.description.toLowerCase().includes(searchName))
-        );
-    }
-    
-    if (dataToExport.length === 0) {
-        alert('No expense data to export.');
-        return;
-    }
-    
-    // Sort by date (oldest first)
-    dataToExport.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
-    // Prepare data for Excel
-    const excelData = [];
-    
-    // Add header
-    excelData.push(['TAREK ENTERPRISE - EXPENSE REPORT']);
-    excelData.push(['Generated on: ' + new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })]);
-    excelData.push([]); // Empty row
-    
-    // Add column headers
-    excelData.push(['Date', 'Expense Name', 'Description', 'Amount']);
-    
-    let totalAmount = 0;
-    
-    // Add expense data
-    dataToExport.forEach(record => {
-        excelData.push([
-            record.date,
-            record.name,
-            record.description || '',
-            `$${record.amount.toFixed(2)}`
-        ]);
-        totalAmount += record.amount;
-    });
-    
-    // Add summary
-    excelData.push([]); // Empty row
-    excelData.push(['SUMMARY']);
-    excelData.push(['Total Records:', dataToExport.length]);
-    excelData.push(['Total Amount:', `$${totalAmount.toFixed(2)}`]);
-    
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(excelData);
-    
-    // Set column widths
-    ws['!cols'] = [
-        { width: 15 }, // Date
-        { width: 25 }, // Expense Name
-        { width: 30 }, // Description
-        { width: 15 }  // Amount
+    const date = document.getElementById('expense-search-date').value;
+    const month = document.getElementById('expense-search-month').value;
+    const name = document.getElementById('expense-search-name').value.toLowerCase();
+    let expenses = JSON.parse(localStorage.getItem('tarekExpenseData')) || [];
+    if (date) expenses = expenses.filter(e => e.date === date);
+    else if (month) expenses = expenses.filter(e => e.date.startsWith(month));
+    if (name) expenses = expenses.filter(e => e.name.toLowerCase().includes(name));
+    if (expenses.length === 0) { alert('No data to export.'); return; }
+
+    expenses.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const rows = [
+        ['TAREK ENTERPRISE - EXPENSE REPORT'],
+        ['Generated on: ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })],
+        [],
+        ['Date', 'Expense Name', 'Description', 'Amount'],
+        ...expenses.map(e => [formatDate(e.date), e.name, e.description || '', `$${e.amount.toFixed(2)}`]),
+        [],
+        ['TOTAL', '', '', `$${expenses.reduce((s, e) => s + e.amount, 0).toFixed(2)}`]
     ];
-    
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Expense Report');
-    
-    // Generate filename
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [15, 25, 30, 15].map(w => ({ width: w }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
     let filename = 'Tarek_Enterprise_Expenses';
-    if (searchDate) {
-        filename += `_${searchDate}`;
-    } else if (searchMonth) {
-        filename += `_${searchMonth.replace('-', '_')}`;
-    } else {
-        filename += `_All_Records`;
-    }
+    if (date) filename += `_${date}`;
+    else if (month) filename += `_${month.replace('-', '_')}`;
     filename += `_${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    // Save file
     XLSX.writeFile(wb, filename);
 }
 
-// Initialize expense form with today's date
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
-});
