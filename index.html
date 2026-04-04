@@ -65,8 +65,7 @@
         <div id="add-stock" class="tab-content">
             <div class="card">
                 <h2>Stock Management</h2>
-                
-                <!-- Category Selection -->
+
                 <div class="category-tabs">
                     <button class="category-btn active" onclick="showCategory('raw-materials', this)">Raw Materials</button>
                     <button class="category-btn" onclick="showCategory('furniture-materials', this)">Furniture Materials</button>
@@ -86,7 +85,6 @@
                             </div>
                         </form>
                     </div>
-                    
                     <div class="current-stock-section">
                         <h3>Raw Materials Stock</h3>
                         <div class="stock-search">
@@ -102,9 +100,7 @@
                             </div>
                         </div>
                         <div class="stock-container">
-                            <div id="raw-stock-list">
-                                <!-- Raw materials stock items will be displayed here -->
-                            </div>
+                            <div id="raw-stock-list"></div>
                         </div>
                     </div>
                 </div>
@@ -123,7 +119,6 @@
                             </div>
                         </form>
                     </div>
-                    
                     <div class="current-stock-section">
                         <h3>Furniture Materials Stock</h3>
                         <div class="stock-search">
@@ -139,9 +134,7 @@
                             </div>
                         </div>
                         <div class="stock-container">
-                            <div id="furniture-stock-list">
-                                <!-- Furniture materials stock items will be displayed here -->
-                            </div>
+                            <div id="furniture-stock-list"></div>
                         </div>
                     </div>
                 </div>
@@ -152,8 +145,6 @@
         <div id="daily-expenses" class="tab-content">
             <div class="card">
                 <h2>Daily Expenses Management</h2>
-                
-                <!-- Add Expense Form -->
                 <div class="expense-form-section">
                     <h3>Add Daily Expense</h3>
                     <form id="expense-form">
@@ -182,7 +173,6 @@
                     </form>
                 </div>
 
-                <!-- Expense Summary -->
                 <div class="expense-summary-section">
                     <div class="summary-cards">
                         <div class="summary-card">
@@ -200,7 +190,6 @@
                     </div>
                 </div>
 
-                <!-- Expense History -->
                 <div class="expense-history-section">
                     <h3>Expense History</h3>
                     <div class="expense-search">
@@ -212,9 +201,7 @@
                         <button onclick="exportExpensesToExcel()" class="export-btn">Export to Excel</button>
                     </div>
                     <div class="expense-container">
-                        <div id="expense-list">
-                            <!-- Expense records will be displayed here -->
-                        </div>
+                        <div id="expense-list"></div>
                     </div>
                 </div>
             </div>
@@ -224,7 +211,6 @@
         <div id="sales-history" class="tab-content">
             <div class="card">
                 <h2>Sales History</h2>
-                
                 <div class="search-section">
                     <div class="search-controls">
                         <input type="date" id="search-date" placeholder="Search by date">
@@ -234,18 +220,15 @@
                         <button onclick="exportToExcel()" class="export-btn">Export to Excel</button>
                     </div>
                 </div>
-
                 <div class="summary-section">
                     <div class="summary-card">
                         <h4>Total Records: <span id="total-records">0</span></h4>
                         <h4>Total Amount: $<span id="total-amount">0.00</span></h4>
+                        <h4>Total Profit: $<span id="total-profit">0.00</span></h4>
                     </div>
                 </div>
-
                 <div class="history-container">
-                    <div id="sales-list">
-                        <!-- Sales records will be displayed here -->
-                    </div>
+                    <div id="sales-list"></div>
                 </div>
             </div>
         </div>
