@@ -229,18 +229,27 @@ function displaySalesRecords(records) {
         totalRecordsEl.textContent = '0';
         totalAmountEl.textContent = '0.00';
         totalProfitEl.textContent = '0.00';
+        document.getElementById('raw-profit').textContent = '0.00';
+        document.getElementById('furniture-profit').textContent = '0.00';
         return;
     }
 
-    var grandRevenue = 0, grandProfit = 0;
+    var grandRevenue = 0, grandProfit = 0, rawProfit = 0, furnitureProfit = 0;
     records.forEach(function(r) {
         grandRevenue += r.dailyTotal;
-        r.items.forEach(function(i) { grandProfit += getItemProfit(i); });
+        r.items.forEach(function(i) {
+            var p = getItemProfit(i);
+            grandProfit += p;
+            if (i.category === 'raw') rawProfit += p;
+            else furnitureProfit += p;
+        });
     });
 
     totalRecordsEl.textContent = records.length;
     totalAmountEl.textContent = grandRevenue.toFixed(2);
     totalProfitEl.textContent = grandProfit.toFixed(2);
+    document.getElementById('raw-profit').textContent = rawProfit.toFixed(2);
+    document.getElementById('furniture-profit').textContent = furnitureProfit.toFixed(2);
 
     salesList.innerHTML = records.map(function(record) {
         var recordProfit = 0;
@@ -262,7 +271,10 @@ function displaySalesRecords(records) {
         return '<div class="sales-record">' +
             '<div class="record-header">' +
                 '<h4>Date: ' + formatDate(record.date) + '</h4>' +
-                '<span class="daily-profit-badge">Daily Profit: $' + recordProfit.toFixed(2) + '</span>' +
+                '<div class="record-header-right">' +
+                    '<span class="daily-profit-badge">Daily Profit: $' + recordProfit.toFixed(2) + '</span>' +
+                    '<button class="delete-sale-btn" onclick="deleteSaleRecord(\'' + record.id + '\')">Delete</button>' +
+                '</div>' +
             '</div>' +
             '<div class="record-totals">' +
                 '<span class="record-total">Revenue: $' + record.dailyTotal.toFixed(2) + '</span>' +
@@ -286,6 +298,13 @@ function searchSales() {
 function showAllSales() {
     document.getElementById('search-date').value = '';
     document.getElementById('search-month').value = '';
+    loadSalesHistory();
+}
+
+function deleteSaleRecord(id) {
+    if (!confirm('Delete this sales record? This cannot be undone.')) return;
+    var data = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
+    localStorage.setItem('tarekSalesData', JSON.stringify(data.filter(function(r) { return r.id !== id; })));
     loadSalesHistory();
 }
 
