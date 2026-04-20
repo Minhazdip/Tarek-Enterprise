@@ -639,3 +639,29 @@ header p {
     font-weight: bold;
     color: #dc3545;
 }
+
+/* Category profit colors */
+#raw-profit { color: #28a745; }
+#furniture-profit { color: #667eea; }
+
+/* Delete sale button */
+.record-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.delete-sale-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.delete-sale-btn:hover { background: #c82333; }
