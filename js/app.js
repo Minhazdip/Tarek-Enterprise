@@ -302,10 +302,29 @@ function showAllSales() {
 }
 
 function deleteSaleRecord(id) {
-    if (!confirm('Delete this sales record? This cannot be undone.')) return;
+    if (!confirm('Delete this sales record? Stock will be restored automatically.')) return;
     var data = JSON.parse(localStorage.getItem('tarekSalesData')) || [];
+    var record = data.find(function(r) { return r.id === id; });
+
+    // Restore stock for each item in the deleted record
+    if (record) {
+        record.items.forEach(function(item) {
+            var key = 'tarekStockData_' + item.category;
+            var stockData = JSON.parse(localStorage.getItem(key)) || [];
+            var stockItem = stockData.find(function(s) { return s.name === item.name; });
+            if (stockItem) {
+                stockItem.quantity += item.quantity;
+                stockItem.updatedAt = new Date().toISOString();
+                localStorage.setItem(key, JSON.stringify(stockData));
+            }
+        });
+    }
+
     localStorage.setItem('tarekSalesData', JSON.stringify(data.filter(function(r) { return r.id !== id; })));
     loadSalesHistory();
+    loadStockList('raw');
+    loadStockList('furniture');
+    populateProductDropdowns();
 }
 
 function formatDate(str) {
